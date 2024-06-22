@@ -64,8 +64,6 @@ class Selection:
 
 class PluginDialog(FreeroutingAltBase):
     def __init__(self, board, parent):
-        #super().__init__(None, title='Freerouting Alt',size=wx.Size(810,650),style=wx.RESIZE_BORDER|wx.CLOSE_BOX|wx.DIALOG_NO_PARENT)
-        #super().__init__(None, title='Freerouting Alt',style=wx.RESIZE_BORDER|wx.CLOSE_BOX|wx.DIALOG_NO_PARENT)
         super().__init__(None)
         
         
@@ -105,10 +103,7 @@ class PluginDialog(FreeroutingAltBase):
         self.SetFocus()
         
         
-
-    
     def handle_message(self, msg):
-        #print(handle_message(msg))
         if msg is None:
             return
         force=False
@@ -199,9 +194,7 @@ class PluginDialog(FreeroutingAltBase):
                 wx.LogError("Cannot save current data in file '%s'." % pathname)
     
     def run(self, event):
-        #fn = tempfile.mktemp()
-        #pcbnew.ExportSpecctraDSN(self.board, fn)
-        #dsn_text = open(fn).read()
+        
         dsn_obj=''
         if self.selection.has_selection and self.route_within_zones_checkbox.IsChecked():
             dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board,

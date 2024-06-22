@@ -8,7 +8,7 @@ include Makefile.src
 
 freerouting_stdout.jar: build/classes.stamp
 #	cp Constants.class main/java
-	jar cmf build/MANIFEST.MF $(JAR) `find -name \*.class`
+	HERE=`pwd` && cd $(OBJDIR) && jar cmf $$HERE/build/MANIFEST.MF $(JAR) `find -name \*.class`
 
 build/Constants.java: FORCE
 	cd build && rev=$(REV) ./gen.sh

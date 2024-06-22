@@ -1,21 +1,12 @@
 import socket, json, struct
 
 
-def recv_exact_xx(sock, ln):
-    res = b''
-    while len(res) < ln:
-        x = sock.recv(ln - len(res))
-        if not x:
-            raise Exception("socket closed?")
-        res+=x
-    return res
-
 def read_exact(sock, ln):
     res = b''
     while len(res) < ln:
         x = sock.read(ln - len(res))
         if not x:
-            raise Exception("socket closed?")
+            raise Exception("read %d bytes from %s failed" % (ln,sock))
         res+=x
     return res
 
@@ -28,13 +19,8 @@ class MessageReceiver:
         self.responses=responses
         
         self.get_process = get_process 
-        #self.init_socket()
-    
-    def init_socket(self):
-        
-        self.sock=socket.socket()
-        self.sock.connect(('localhost',12345))
-        print("sock: ", self.sock)
+
+
     def read_all(self):
         while True:
             if not self.read_next():
@@ -47,12 +33,10 @@ class MessageReceiver:
         proc = self.get_process()
         if proc is None:
             return False
-            
-        #a,b = recv_exact(self.sock, 2)
+
         a,b = read_exact(proc.stdout, 2)
         
         ln = a*256+b
-        #msg_bytes = recv_exact(self.sock, ln)
         msg_bytes = read_exact(proc.stdout, ln)
         
         try:
@@ -61,15 +45,15 @@ class MessageReceiver:
             if msg['type'] == 'message':
                 self.message_handler(msg)
                 if msg.get('wait_reply')==True:
-                    print("!!!")
-                    #self.sock.sendall(b'\1')
+                    proc.stdin.write(b'\0\1\1')
+                    proc.stdin.flush()
                 
                 return True
                 
             elif msg['type'] == 'finished':
                 if msg.get('wait_reply')==True:
-                    #self.sock.sendall(b'\1')
-                    print("!!!")
+                    proc.stdin.write(b'\0\1\1')
+                    proc.stdin.flush()
                 self.board_handler(None)
                 self.message_handler(None)
                 print()
@@ -77,8 +61,8 @@ class MessageReceiver:
                 
             elif msg['type'] == 'board_notify':
                 if msg.get('wait_reply')==True:
-                    #self.sock.sendall(b'\1')
-                    print("!!!")
+                    proc.stdin.write(b'\0\1\1')
+                    proc.stdin.flush()
                 self.board_handler(msg)
                 
                 return True
@@ -99,7 +83,7 @@ class MessageReceiver:
                 
                 print("request", msg, "response", len(jjp), jjp[:50])
                 zz = struct.pack('>L', len(jjp))+jjp
-                #self.sock.sendall(zz)
+                
                 proc.stdin.write(zz)
                 proc.stdin.flush()
                 

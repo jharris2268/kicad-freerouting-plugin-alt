@@ -211,7 +211,7 @@ class FreeroutingAltBase ( wx.Dialog ):
 
         bSizer2.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
-        self.close_button = wx.Button( self, wx.ID_ANY, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.close_button = wx.Button( self, wx.ID_CANCEL, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
 
         self.close_button.SetDefault()
         bSizer2.Add( self.close_button, 0, wx.ALL, 5 )

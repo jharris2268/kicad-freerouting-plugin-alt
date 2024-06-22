@@ -1,0 +1,25 @@
+{
+    "$schema": "https://go.kicad.org/pcm/schemas/v1",
+    "name": "freerouting_alt",
+    "description": "Alternative freerouting plugin",
+    "description_full": "Alternative freerouting plugin, without seperate gui and closer integration with kicad",
+    "identifier": "com.github.jharris2268.kicad-freerouting-plugin-alt",
+    "type": "plugin",
+    "author": {
+        "name": "jharris2268",
+        "contact": {
+            "web": "https://github.com/jharris2268/"
+        }
+    },
+    "license": "GPL-3.0",
+    "resources": {
+        "homepage": "https://github.com/jharris2268/kicad-freerouting-plugin-alt"
+    },
+    "versions": [
+        {
+            "version": "0.1",
+            "status": "development",
+            "kicad_version": "7.0"            
+        }
+    ]
+}

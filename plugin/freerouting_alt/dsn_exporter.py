@@ -200,9 +200,15 @@ def make_network(board, vias, nets):
 #  )
 
 get_start=lambda d, use_local: tuple(d.GetStart0() if use_local else d.GetStart())
-get_end=lambda d, use_local: tuple(d.GetEnd0() if use_local else d.GetEnd())
+
+def get_end(d, use_local):
+    if d.ShowShape()=='Rect':
+        return get_start(d, use_local)
+    return tuple(d.GetEnd0() if use_local else d.GetEnd())
 
 def merge_drawings(dd, use_local):
+
+    
     parts = [[get_start(d,use_local), get_end(d,use_local), [(d,False)]] for d in dd]
     
     last_len = len(parts)+1
@@ -282,10 +288,11 @@ def get_coords(shape, is_reversed, use_local=False):
     elif shape.GetShapeStr()=='Circle':
         res = arc_coords(shape, True,use_local)
         
-    elif shape.GetShapeStr()=='Polygon':
+    elif shape.GetShapeStr() in ('Polygon','Rect'):
+        print("shape ",shape.GetShapeStr())
         x0,y0 = shape.GetParent().GetPosition() if use_local else (0,0)
         res = [(x-x0,y-y0) for x,y in shape.GetCorners()]
-        
+        res.append(res[0])
     else:
         print("??",shape,shape.GetShapeStr())
     
