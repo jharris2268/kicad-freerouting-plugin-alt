@@ -1,0 +1,54 @@
+Note: this document describes how to build from source. If you do not want
+to install half a gigabyte of java environemnt, you can download the
+precompiled binary pack instead.
+
+Native build
+~~~~~~~~~~~~
+
+1. install dependencies
+
+	apt-get install openjdk-11-jdk-headless openjdk-11-jre-headless zip
+
+	Probably any version would do; it definitely works with 11. For
+	producing the stand-alone package at least 14 is needed (tested
+	with 16).
+
+2. compile
+
+	make
+
+3.a. install the jre pack
+
+	Run as root:
+
+	make install
+
+	Resulting files are copied in /opt/freerouting_cli/
+
+	This setup assumes the system has JRE installed. If you are running this
+	on the same system you compiled on, this is true. If you plan to distrubute
+	the result as a tarball, the tarball will also assume JRE installed on
+	the target systems.
+
+3.b. creating a binary pack
+
+	make binpack
+
+	make tarball
+
+	make zip
+
+	These commands will create build/freerouting_cli/,
+	build/freerouting_cli.tar.gz and build/freerouting_cli.zip
+	respectively. Installation procedure of the tarball/zip pack: unpack
+	in /opt on the target system.
+
+3.c. deb and rpm
+
+	make deb
+
+	make rpm
+
+	Will create build/freerouting*.deb or build/freerouting*.rpm, if jpackage
+	supports those targets. These packages will contain the same
+	/opt/freerouting_cli as the other ones in 3.a. or 3.b.

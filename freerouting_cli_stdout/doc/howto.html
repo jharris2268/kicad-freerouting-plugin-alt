@@ -1,0 +1,26 @@
+<html>
+<body>
+<h1> Freerouting_cli howto </h1>
+
+<h2>From pcb-rnd</h2>
+<p>
+pcb-rnd from version 3.0.1 has freerouting_cli support from the external
+autorouter dialog or the extroute() action.
+<p>
+The dialog box is normally invoked from the menu:
+Connects/Automatic routing/External autorouter.
+
+TODO
+
+<h2>From KiCad</h2>
+<p>
+<ol>
+	<li> Start KiCad and open your project in Pcbnew.
+	<li> Export the PCB into Specctra DSN (File / Export... / Specctra DSN).
+	<li> Execute the router on the dsn file, get the result exported in a SES file.
+	<li> Go back to KiCad's Pcbnew and import the results (File / Import Specctra Session...).
+</ol>
+
+
+</body>
+</html>

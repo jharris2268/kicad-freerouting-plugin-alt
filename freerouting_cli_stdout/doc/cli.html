@@ -1,0 +1,22 @@
+<html>
+<body>
+<H1> Freerouting_cli command line options </h1>
+<p>
+From gui/StartupOptions.java:
+<table border=0 cellspacing=20>
+<tr><td>-de&nbsp;FILENAME     <td>allows design file name to be specified
+<tr><td>-di&nbsp;DIRECTORY    <td>allows design directory to be specified
+<tr><td>-do&nbsp;FILENAME     <td>allows output file name to be specified
+<tr><td>-dr&nbsp;FILENAME     <td>allows design rules file name to be specified
+<tr><td>-fo                   <td>pre-route fanout true. Off by default.
+<tr><td>-ap&nbsp;INTEGER      <td>allows maximum batch autorouter passes to be specified; should be 2 or more.
+<tr><td>-pp&nbsp;INTEGER      <td>allows maximum post route optimising passes to be specified. Off by default.
+<tr><td>-test                 <td>testing mode true (to enable experimental features). Off by default.
+<tr><td>-trace&nbsp;INTEGER   <td>default value 0 (no debug output), 1 critical debug info, 2 all debug info
+</table>
+<p>
+example usage:
+<p>
+java -jar freerouting-executable.jar -de ../../tests/pic_programmer.dsn -dr ../../tests/pic_programmer.rules -do test.ses -ap 5 -fo -pp 3
+</body>
+</html>

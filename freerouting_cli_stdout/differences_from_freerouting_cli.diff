@@ -1,0 +1,916 @@
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/autoroute/BatchAutorouter.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/autoroute/BatchAutorouter.java
+36c36,38
+< 
+---
+> import eu.mihosoft.freerouting.logger.MessageServer;
+> import org.json.JSONStringer;
+> import org.json.JSONObject;
+55c57,60
+<         BatchAutorouter router_instance = new BatchAutorouter(p_thread, true, p_with_prefered_directions, p_ripup_costs);
+---
+>         
+>         //FRLogger.plop("call autoroute_passes_for_optimizing_item(...,"+p_max_pass_count+","+p_ripup_costs+","+p_with_prefered_directions+")");
+>         
+>         BatchAutorouter router_instance = new BatchAutorouter(p_thread, true, p_with_prefered_directions, p_ripup_costs, false);
+83c88
+<             int p_start_ripup_costs)
+---
+>             int p_start_ripup_costs, boolean info_messages)
+105a111
+>         this.info_messages = info_messages;
+118a125,146
+>             Integer curr_pass_no = hdlg.get_settings().autoroute_settings.get_start_pass_no();
+>             if (FRLogger.use_message_server && hdlg.get_settings().check_continue) {
+>                 try {
+>                     JSONStringer request_obj = MessageServer.getInstance().start_message("request");
+>                     request_obj.key("request_type").value("continue_autoroute");
+>                     request_obj.key("pass_no").value(curr_pass_no);
+>                     request_obj.key("items_remaining").value(get_autoroute_item_list().size());
+>                     request_obj.key("wait_reply").value(true);
+>                     request_obj.endObject();
+>                     
+>                     JSONObject response_obj = MessageServer.getInstance().send_json_expect_json_reply(request_obj);
+>                     if (!response_obj.has("continue") || !response_obj.getBoolean("continue")) {
+>                         this.is_interrupted=true;
+>                         break;
+>                     }
+>                 } catch (Exception e) {
+>                     FRLogger.error(e.toString(), e);
+>                 }
+>             }
+>                 
+>                 
+>             
+132c160
+<             Integer curr_pass_no = hdlg.get_settings().autoroute_settings.get_start_pass_no();
+---
+>             //Integer curr_pass_no = hdlg.get_settings().autoroute_settings.get_start_pass_no(); [move up]
+139,140c167,168
+<             String start_message = "Batch Autorouter running, Pass: " + curr_pass_no.toString();
+<             FRLogger.info(start_message);
+---
+>             //String start_message = "Batch Autorouter running, Pass: " + curr_pass_no.toString();
+>             //FRLogger.info(start_message);
+183a212,254
+>     private Collection<Item> get_autoroute_item_list() {
+>         Collection<Item> autoroute_item_list = new java.util.LinkedList<Item>();
+>         Set<Item> handeled_items = new TreeSet<Item>();
+>         Iterator<UndoableObjects.UndoableObjectNode> it = routing_board.item_list.start_read_object();
+>         for (;;)
+>         {
+>             UndoableObjects.Storable curr_ob = routing_board.item_list.read_object(it);
+>             if (curr_ob == null)
+>             {
+>                 break;
+>             }
+>             if (curr_ob instanceof Connectable && curr_ob instanceof Item)
+>             {
+>                 Item curr_item = (Item) curr_ob;
+>                 if (!curr_item.is_route())
+>                 {
+>                     if (!handeled_items.contains(curr_item))
+>                     {
+>                         for (int i = 0; i < curr_item.net_count(); ++i)
+>                         {
+>                             int curr_net_no = curr_item.get_net_no(i);
+>                             Set<Item> connected_set = curr_item.get_connected_set(curr_net_no);
+>                             for (Item curr_connected_item : connected_set)
+>                             {
+>                                 if (curr_connected_item.net_count() <= 1)
+>                                 {
+>                                     handeled_items.add(curr_connected_item);
+>                                 }
+>                             }
+>                             int net_item_count = routing_board.connectable_item_count(curr_net_no);
+>                             if (connected_set.size() < net_item_count)
+>                             {
+>                                 autoroute_item_list.add(curr_item);
+>                                 
+>                             }
+>                         }
+>                     }
+>                 }
+>             }
+>         }
+>         return autoroute_item_list;
+>     }
+> 
+191a263,264
+>             Collection<Item> autoroute_item_list = get_autoroute_item_list();
+>             /*
+229c302
+<             }
+---
+>             }*/
+236c309
+< 	    int items_to_autoroute = items_to_go_count;
+---
+>             int items_to_autoroute = items_to_go_count;
+240,241c313,317
+< 	    FRLogger.info("Items to autoroute: " + items_to_autoroute);
+<  //               hdlg.screen_messages.set_batch_autoroute_info(items_to_go_count, routed, ripped_item_count, not_found);
+---
+>             //FRLogger.info("Items to autoroute: " + items_to_autoroute);
+>             if (this.info_messages) {
+>                 FRLogger.info("Batch Autorouter pass "+p_pass_no+": "+items_to_autoroute+" Items to autoroute.");
+>             }
+> //          hdlg.screen_messages.set_batch_autoroute_info(items_to_go_count, routed, ripped_item_count, not_found);
+260c336,339
+< 			FRLogger.progress("autoroute", routed, items_to_autoroute);
+---
+>                         if (info_messages) {
+>                             FRLogger.progress("autoroute", routed, items_to_autoroute);
+>                         }
+>                         
+439a519
+>     private boolean info_messages;
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/autoroute/BatchOptRoute.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/autoroute/BatchOptRoute.java
+41c41,43
+< 
+---
+> import eu.mihosoft.freerouting.logger.MessageServer;
+> import org.json.JSONStringer;
+> import org.json.JSONObject;
+57a60,61
+>         
+>         
+65,66c69
+< 	int pre_optimize_vias = routing_board.get_vias().size();
+< 	double pre_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
+---
+>         
+70c73,77
+< 	int max_postroute_passes = this.thread.hdlg.settings.autoroute_settings.get_max_postroute_passes();
+---
+>         int max_postroute_passes = this.thread.hdlg.settings.autoroute_settings.get_max_postroute_passes();
+>         
+>         pre_optimize_vias = routing_board.get_vias().size();
+>         pre_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
+>         
+72c79
+< 	FRLogger.info("BatchOptRoute.optimize_board():Current pass no: " + curr_pass_no);
+---
+>         FRLogger.info("BatchOptRoute.optimize_board():Current pass no: " + curr_pass_no);
+74,76c81,89
+< 	while (route_improved && max_postroute_passes > curr_pass_no)
+<         {
+< 	    FRLogger.progress("post_route: ", curr_pass_no, max_postroute_passes);
+---
+>         while (route_improved && max_postroute_passes > curr_pass_no) {
+>             
+>             if (!check_continue_optomize(curr_pass_no)) {
+>                 break;
+>             }
+>             
+>             
+>             
+>             FRLogger.progress("post_route: ", curr_pass_no, max_postroute_passes);
+81,82c94,96
+< 	FRLogger.progress("post_route: ", max_postroute_passes, max_postroute_passes);
+< 	int post_optimize_vias = routing_board.get_vias().size();
+---
+>         
+>         FRLogger.progress("post_route: ", max_postroute_passes, max_postroute_passes);
+>         int post_optimize_vias = routing_board.get_vias().size();
+84,90c98,104
+< 	FRLogger.info("After optimize: Via count: " + post_optimize_vias + ", trace length: " + post_optimize_trace_length);
+< 	if (pre_optimize_vias == 0) {
+< 	    FRLogger.info("reduction in vias: 0%");
+< 	} else {
+< 	    FRLogger.info("reduction in vias: " + (1.0 - 1.0*post_optimize_vias/pre_optimize_vias));
+< 	}
+< 	FRLogger.info("reduction in trace length: " + (1.0 - post_optimize_trace_length/pre_optimize_trace_length) + "%");
+---
+>         FRLogger.info("After optimize: Via count: " + post_optimize_vias + ", trace length: " + post_optimize_trace_length);
+>         if (this.pre_optimize_vias == 0) {
+>             FRLogger.info("reduction in vias: 0%");
+>         } else {
+>             FRLogger.info("reduction in vias: " + (1.0 - 1.0*post_optimize_vias/pre_optimize_vias));
+>         }
+>         FRLogger.info("reduction in trace length: " + (1.0 - post_optimize_trace_length/pre_optimize_trace_length) + "%");
+92c106,136
+< 
+---
+>     
+>     private boolean check_continue_optomize(int curr_pass_no) {
+>         
+>         if (!FRLogger.use_message_server) {
+>             return true;
+>         }
+>         if (!this.thread.hdlg.get_settings().check_continue) {
+>             return true;
+>         }
+>         try {    
+>             int post_optimize_vias = routing_board.get_vias().size();
+>             double post_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
+>             JSONStringer request_obj = MessageServer.getInstance().start_message("request");
+>             request_obj.key("request_type").value("continue_optimize");
+>             request_obj.key("curr_pass_no").value(curr_pass_no);
+>             request_obj.key("pre_optimize_num_vias").value(pre_optimize_vias);
+>             request_obj.key("pre_optimize_trace_length").value(pre_optimize_trace_length);
+>             
+>             request_obj.key("post_optimize_vias").value(post_optimize_vias);
+>             request_obj.key("post_optimize_trace_length").value(post_optimize_trace_length);
+>             request_obj.key("wait_reply").value(true);
+>             request_obj.endObject();
+>             
+>             JSONObject reply_obj = MessageServer.getInstance().send_json_expect_json_reply(request_obj);
+>             return reply_obj.has("continue") && reply_obj.getBoolean("continue");
+>         } catch (Exception e) {
+>             FRLogger.error(e.toString(), e);
+>             return true;
+>         }
+>     }
+>      
+109a154
+>         int ii=0;
+111a157
+>             FRLogger.progress("optimize route item",ii,this.routing_board.item_list.size());
+124a171
+>             ii+=1;
+139a187,189
+>         
+>         
+>         
+402a453
+>         
+403a455,457
+>     
+>     private int pre_optimize_vias;
+>     private double pre_optimize_trace_length;
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/board/BoardObserverAdaptor.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/board/BoardObserverAdaptor.java
+25a26,27
+> import eu.mihosoft.freerouting.logger.FRLogger;
+> import eu.mihosoft.freerouting.logger.MessageServer;
+26a29,37
+> import eu.mihosoft.freerouting.board.PolylineTrace;
+> import eu.mihosoft.freerouting.board.Via;
+> import eu.mihosoft.freerouting.library.Padstack;
+> import eu.mihosoft.freerouting.rules.Net;
+> import eu.mihosoft.freerouting.geometry.planar.Polyline;
+> import eu.mihosoft.freerouting.geometry.planar.Point;
+> import eu.mihosoft.freerouting.geometry.planar.FloatPoint;
+> import org.json.JSONStringer;
+> import java.io.IOException;
+31a43,45
+> 
+> 
+> 
+33a48,240
+>     
+>     private int[] get_pt(Point p) {
+>         FloatPoint curr_float_coors = p.to_float();
+>         int [] curr_coors = new int[2];
+>         curr_coors[0] = (int) Math.round(curr_float_coors.x);
+>         curr_coors[1] = (int) Math.round(curr_float_coors.y);
+>         return curr_coors;
+>     }
+>     
+>     private int[] get_coords(PolylineTrace p_wire) {
+>         Point[] corner_arr = p_wire.polyline().corner_arr();
+>         int [] coors = new int [2 * corner_arr.length];
+>         int corner_index = 0;
+>         int [] prev_coors = null;
+>         for (int i = 0; i < corner_arr.length; ++i)
+>         {
+>             int[] curr_coors = get_pt(corner_arr[i]);
+>             if (i == 0  || ( curr_coors[0] != prev_coors[0] || curr_coors[1] != prev_coors[1])) {
+>                 coors[corner_index] = curr_coors[0];
+>                 ++corner_index;
+>                 coors[corner_index] = curr_coors[1];
+>                 ++corner_index;
+>                 prev_coors = curr_coors;
+>             }
+>         }
+>         if (corner_index < coors.length)
+>         {
+>             int [] adjusted_coors = new int[corner_index];
+>             for (int i = 0; i < adjusted_coors.length; ++i)
+>             {
+>                 adjusted_coors[i] = coors[i];
+>             }
+>             coors = adjusted_coors;
+>         }
+>         return coors;
+>     }
+>     
+>     private double line_length(int[] coords) {
+>         double res=0;
+>         for (int i=0; i < (coords.length-3); i+=2) {
+>             double x=coords[i+2]-coords[i];
+>             double y=coords[i+3]-coords[i+1];
+>             res += java.lang.Math.sqrt(x*x + y*y);
+>         }
+>         return res;
+>     }           
+>     
+>     
+>     private synchronized void send_polyline_trace_json(String op, PolylineTrace polyline) throws IOException {
+>         JSONStringer polyline_obj = MessageServer.getInstance().start_message("board_notify");
+>         
+>         polyline_obj.key("operation").value(op);
+>         polyline_obj.key("object_type").value("track");
+>         
+>         polyline_obj.key("id").value(polyline.get_id_no());
+>         
+>         String[] nets = new String[polyline.net_no_arr.length];
+>         for (int i=0; i < polyline.net_no_arr.length; i++) {
+>             Net n = polyline.board.rules.nets.get(polyline.net_no_arr[i]);
+>             if (n != null) {
+>                 nets[i] = n.name;
+>             }
+>         }
+>         polyline_obj.key("nets").value(nets);
+>         
+>         String layer = polyline.board.layer_structure.arr[polyline.get_layer()].name;
+>         polyline_obj.key("layer").value(layer);
+>         polyline_obj.key("width").value((int) Math.round(2 * polyline.get_half_width()));
+>         int[] coords = get_coords(polyline);
+>         
+>         polyline_obj.key("length").value(line_length(coords));
+>         polyline_obj.key("coords").value(coords);
+>         
+>         
+>         send_obj(polyline_obj);
+>     }
+>     
+>     private synchronized void send_obj(JSONStringer polyline_obj) {
+>         
+>         _count+=1;
+>         boolean wait_reply=false;
+>         
+>         /*
+>         if ((_count - _last_reply_req)>=1000) {
+>         
+>         //if (_bytes_count > 100000) {
+>             
+>             try {
+>                 FRLogger.plop("BoardObserverAdaptor send_obj with wait, _count="+_count+", _bytes_count="+_bytes_count);
+>             } catch (Exception e) {}
+>             
+>             _bytes_count = 0;
+>             _last_reply_req=_count;
+>             polyline_obj.key("wait_reply").value(true);
+>             wait_reply=true;
+>         }*/
+>         
+>         polyline_obj.endObject();
+>         
+>         _bytes_count += polyline_obj.toString().length();
+>         
+>         try {
+>         /*    if (wait_reply) {
+>                 if (MessageServer.getInstance().send_json_expect_one_byte_response(polyline_obj) != 'y'){
+>                     throw new IOException("wrong reply");
+>                 }
+>             } else{*/
+>                 MessageServer.getInstance().send_json_no_reply(polyline_obj);
+>             //}
+>         } catch (IOException e) {
+>             //pass
+>         }
+>     }
+>     
+>     private synchronized void send_via_json(String op, Via via)  throws IOException {
+>         JSONStringer via_obj = MessageServer.getInstance().start_message("board_notify");
+>         
+>         
+>         via_obj.key("operation").value(op);
+>         via_obj.key("object_type").value("via");
+>         
+>         via_obj.key("id").value(via.get_id_no());
+>         String[] nets = new String[via.net_no_arr.length];
+>         for (int i=0; i < via.net_no_arr.length; i++) {
+>             Net n = via.board.rules.nets.get(via.net_no_arr[i]);
+>             if (n != null) {
+>                 nets[i] = n.name;
+>             }
+>         }
+>         via_obj.key("nets").value(nets);
+>         
+>         int[] center = get_pt(via.get_center());
+>         via_obj.key("x").value(center[0]);
+>         via_obj.key("y").value(center[1]);
+>         
+>         Padstack padstack = via.get_padstack();
+>         via_obj.key("padstack").value(padstack.name);
+>         via_obj.key("from_layer").value(via.board.layer_structure.arr[padstack.from_layer()]);
+>         via_obj.key("to_layer").value(via.board.layer_structure.arr[padstack.to_layer()]);
+>         
+>         send_obj(via_obj);
+>         
+>     }
+>  
+>     
+>     private void handle_item(String op, Item p_item) {
+>         if (!FRLogger.use_message_server) {
+>             return;
+>         }
+>         
+>         if (p_item instanceof eu.mihosoft.freerouting.board.BoardOutline) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" BoardOutline");
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.ComponentOutline) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" ComponentOutline");
+>         
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.Pin) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" Pin");
+>         } else if (p_item instanceof Via) {
+>             try {
+>                 send_via_json(op, (Via) p_item);
+>             } catch (IOException ex) {
+>                 FRLogger.send_message("boardobserver", "notify "+op+" PolylineTrace (json failed)");
+>             }
+>             //FRLogger.send_message("boardobserver", "notify "+op+" Via");
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.DrillItem) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" DrillItem");
+>             
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.ComponentObstacleArea) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" ComponentObstacleArea");
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.ConductionArea) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" ConductionArea");
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.ViaObstacleArea) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" ViaObstacleArea");
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.ObstacleArea) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" ObstacleArea");
+>             
+>         } else if (p_item instanceof PolylineTrace) {
+>             //FRLogger.send_message("boardobserver", "notify "+op+" PolylineTrace");
+>             try {
+>                 send_polyline_trace_json(op, (PolylineTrace) p_item);
+>             } catch (IOException ex) {
+>                 FRLogger.send_message("boardobserver", "notify "+op+" PolylineTrace (json failed)");
+>             }
+>             
+>         } else if (p_item instanceof eu.mihosoft.freerouting.board.Trace) {
+>             FRLogger.send_message("boardobserver", "notify "+op+" Trace");
+>         } else {
+>             
+>             FRLogger.send_message("boardobserver", "notify "+op+" unknown Item");
+>         }
+>     }
+>     
+>     
+39c246
+<         
+---
+>         handle_item("deleted",p_item);
+47c254
+<         
+---
+>         handle_item("changed",p_item);
+54a262
+>         handle_item("new",p_item);
+63c271
+<         
+---
+>         FRLogger.send_message("boardobserver", "notify_moved");
+91a300,302
+>     private int _last_reply_req=0;
+>     private int _count=0;
+>     private int _bytes_count = 0;
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/datastructures/UndoableObjects.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/datastructures/UndoableObjects.java
+374a375,379
+>     
+>     public int size() {
+>         return objects.size();
+>     }
+>     
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/designforms/specctra/WriteScopeParameter.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/designforms/specctra/WriteScopeParameter.java
+52c52
+<         String[] reserved_chars = {"(", ")", " ", ";", "-", "_"};
+---
+>         String[] reserved_chars = {"(", ")", " ", ";", "-", "_", "{", "}"};
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/gui/DesignFile.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/gui/DesignFile.java
+43a44
+> /*
+53c54
+< 
+---
+> */
+58c59
+<     private DesignFile(java.io.File p_design_file)
+---
+>     public DesignFile(java.io.File p_design_file)
+73a75,80
+>     
+>     public DesignFile(String file_name, String p_design_text) {
+>         this.file_name = file_name;
+>         this.design_file_text = p_design_text;
+>     }
+>     
+81,85c88,90
+<         java.io.InputStream result;
+< 
+< 
+<             if (this.input_file == null)
+<             {
+---
+>         if (this.input_file==null) {
+>             
+>             if (this.design_file_text == null) {
+88,92c93,99
+<             try
+<             {
+<                 result = new java.io.FileInputStream(this.input_file);
+<             } catch (Exception e)
+<             {
+---
+>             
+>             //return new java.io.StringBufferInputStream(this.design_file_text);
+>             try {
+>                 byte[] bytes = this.design_file_text.getBytes("UTF-8");
+>                 FRLogger.info("creating input stream with "+bytes.length+" bytes");
+>                 return new java.io.ByteArrayInputStream(bytes);
+>             } catch (Exception e) {
+94c101
+<                 result = null;
+---
+>                 return null;
+96,97c103,114
+< 
+<         return result;
+---
+>                 
+>             
+>         }
+>             
+>         
+>         java.io.InputStream result;
+>         try {
+>            return new java.io.FileInputStream(this.input_file);
+>         } catch (Exception e) {
+>             FRLogger.error(e.getLocalizedMessage(), e);
+>         }
+>         return null;
+103,107c120
+<     public String get_name()
+<     {
+< 
+<         String result;
+< 
+---
+>     public String get_name() {
+110,114c123
+<             result = this.input_file.getName();
+<         }
+<         else
+<         {
+<             result = null;
+---
+>             return this.input_file.getName();
+116c125,126
+<         return result;
+---
+>         return this.file_name;
+>         
+123c133
+<     public boolean write_specctra_session_file(BoardFrame p_board_frame)
+---
+>     /*public boolean write_specctra_session_file(BoardFrame p_board_frame)
+157c167
+<     }
+---
+>     }*/
+162c172
+<     private boolean write_rules_file(String p_design_name, eu.mihosoft.freerouting.interactive.BoardHandling p_board_handling)
+---
+>     /*private boolean write_rules_file(String p_design_name, eu.mihosoft.freerouting.interactive.BoardHandling p_board_handling)
+181c191
+<     }
+---
+>     }*/
+246a257
+>         if (design_file_text!=null) { return true; }
+252c263
+<     private final java.io.File input_file;
+---
+>     private java.io.File input_file;
+253a265,268
+>     
+>     private String file_name;
+>     private String design_file_text;
+>     
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/gui/MainApplication.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/gui/MainApplication.java
+33a34
+> import eu.mihosoft.freerouting.logger.MessageServer;
+39a41,43
+> import java.io.IOException;
+> import org.json.JSONObject;
+> import org.json.JSONStringer;
+55a60,80
+>     
+>         StartupOptions startupOptions = StartupOptions.parse(args);
+>         
+>         int ret = run_main(startupOptions);
+>         
+>         if (FRLogger.use_message_server) {
+>             FRLogger.plop(MessageServer.stats());
+>         }
+>         FRLogger.traceExit("MainApplication.main()");
+>         if (FRLogger.use_message_server) {
+>             try {
+>                 MessageServer.getInstance().send_finished();
+>             } catch (IOException ex) {
+>                 FRLogger.plop("MessageServer.getInstance().send_finished() failed: "+ex);
+>             }
+>         }
+>         System.exit(ret);
+>         
+>     }
+>     
+>     private static int run_main(StartupOptions startupOptions) {        
+57,59c82
+< 	StartupOptions startupOptions = StartupOptions.parse(args);
+< 
+< 	FRLogger.info(startupOptions.testVersion());
+---
+>         FRLogger.info(startupOptions.testVersion());
+65c88
+<         if (startupOptions.single_design_option)
+---
+>         if (startupOptions.single_design_option || true)
+68,69c91
+<             if (startupOptions.session_file_option)
+<             {
+---
+>             if (startupOptions.session_file_option) {
+71,73c93
+<             }
+<             else
+<             {
+---
+>             } else {
+76,96c96,127
+< 
+<             FRLogger.info("Opening '"+startupOptions.design_input_filename+"'...");
+<             DesignFile design_file = DesignFile.get_instance(startupOptions.design_input_filename, false);
+<             if (design_file == null)
+<             {
+<                 FRLogger.warn("File with name " +  startupOptions.design_input_filename + " not found");
+<                 return;
+<             }
+<             String message = "Loading design " + startupOptions.design_input_filename;
+< 
+< 	    FRLogger.info(message);
+< 	    final BoardFrame new_frame =
+<                     create_board_frame(design_file, board_option,
+<                             startupOptions.test_version_option, 
+<                             startupOptions.design_rules_filename);
+< 	    
+<        	    if (new_frame == null)
+<                 {
+<                     FRLogger.warn("Couldn't create window frame");
+<                     System.exit(1);
+<                     return;
+---
+>             
+>             DesignFile design_file = null;
+>             if (startupOptions.design_input_filename != null) {
+>                 FRLogger.info("Opening '"+startupOptions.design_input_filename+"'...");
+>                 design_file = new DesignFile(new java.io.File(startupOptions.design_input_filename));
+>                 if (design_file == null) {
+>                     FRLogger.warn("File with name " +  startupOptions.design_input_filename + " not found");
+>                     return 1;
+>                 }
+>             } else {
+>                 if (!startupOptions.use_message_server) {
+>                     FRLogger.warn("no input file specified");
+>                     return 1;
+>                 }
+>                 try {
+>                     FRLogger.info("requesting design_file_text");
+>                     JSONStringer request_obj = MessageServer.getInstance().start_message("request");
+>                     request_obj.key("request_type").value("design_file_text");
+>                     request_obj.key("wait_reply").value(true);
+>                     request_obj.endObject();
+>                     
+>                     JSONObject reply_obj = MessageServer.getInstance().send_json_expect_json_reply(request_obj);
+>                     if (!reply_obj.has("design_file_text")) {
+>                         FRLogger.warn("no design file text received");
+>                         return 1;
+>                     }
+>                     
+>                     String design_file_text = reply_obj.getString("design_file_text");
+>                     String file_name = reply_obj.getString("file_name");
+>                     design_file = new DesignFile(file_name, design_file_text);
+>                 } catch (IOException e) {
+>                     FRLogger.warn("design file request failed "+e);
+98c129,145
+< 	    new_frame.board_panel.board_handling.settings.autoroute_settings.set_stop_pass_no(startupOptions.max_autoroute_passes);
+---
+>                 
+>             }
+>             FRLogger.info("Loading design " + design_file.get_name());
+>             
+>             final BoardFrame new_frame =
+>                         create_board_frame(design_file, board_option,
+>                                 startupOptions.test_version_option, 
+>                                 startupOptions.design_rules_filename);
+>             
+>        	    if (new_frame == null) {
+>                 FRLogger.warn("Couldn't create window frame");
+>                 
+>                 return 1;
+>             }
+>             new_frame.board_panel.board_handling.settings.check_continue = startupOptions.check_continue;
+>             
+>             new_frame.board_panel.board_handling.settings.autoroute_settings.set_stop_pass_no(startupOptions.max_autoroute_passes);
+100c147
+< 	    if (startupOptions.pre_route_fanout) {
+---
+>             if (startupOptions.pre_route_fanout) {
+109c156
+< 		thread = new_frame.board_panel.board_handling.start_batch_autorouter();
+---
+>                 thread = new_frame.board_panel.board_handling.start_batch_autorouter();
+112a160
+>                         FRLogger.plop("autorouterStarted");
+116a165
+>                         FRLogger.plop("autorouterAborted");
+121a171
+>                         FRLogger.plop("autorouterFinished");
+146c196
+<                                 Runtime.getRuntime().exit(0);
+---
+>                                 //Runtime.getRuntime().exit(0);
+154a205,211
+>                 try {
+>                     FRLogger.plop("call thread join");
+>                     thread.join();
+>                     FRLogger.plop("thread join finished");
+>                 } catch (InterruptedException ex) {
+>                     FRLogger.plop("BatchAutorouterThread exception: "+ex);
+>                 }
+157c214,215
+<         FRLogger.traceExit("MainApplication.main()");
+---
+>         return 0;
+>         
+199c257,261
+< 	boolean read_ok = new_frame.read(input_stream, p_design_file.is_created_from_text_file());
+---
+>         FRLogger.plop("new_frame created..");
+>     
+>     
+>         boolean read_ok = new_frame.read(input_stream, p_design_file.is_created_from_text_file());
+>         FRLogger.plop("read_ok="+read_ok);
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/gui/StartupOptions.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/gui/StartupOptions.java
+30c30,33
+< 
+---
+>     boolean use_message_server = false;
+>     boolean check_continue=false;
+>     
+>     
+82a86,91
+>                 } else if (p_args[i].startsWith("-ms")) {
+>                     use_message_server=true;
+>                     FRLogger.setUseMessageServer(true);
+>                 
+>                 } else if (p_args[i].startsWith("-cc")) {
+>                     check_continue=true;
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/interactive/BatchAutorouterThread.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/interactive/BatchAutorouterThread.java
+52c52
+<         this.batch_autorouter = new BatchAutorouter(this, !autoroute_settings.get_with_fanout(), true, autoroute_settings.get_start_ripup_costs());
+---
+>         this.batch_autorouter = new BatchAutorouter(this, !autoroute_settings.get_with_fanout(), true, autoroute_settings.get_start_ripup_costs(), true);
+77,78c77,78
+< 	    if (hdlg.get_settings().autoroute_settings.get_with_autoroute())
+<             {
+---
+>             boolean autoroute_completed = true;
+>             if (hdlg.get_settings().autoroute_settings.get_with_autoroute()) {
+80,83c80,81
+<                 batch_autorouter.autoroute_passes();
+<             }
+<             else
+<             {
+---
+>                 autoroute_completed = batch_autorouter.autoroute_passes();
+>             } else {
+88c86
+<             if (hdlg.get_settings().autoroute_settings.get_with_postroute())
+---
+>             if (autoroute_completed && hdlg.get_settings().autoroute_settings.get_with_postroute())
+104c102
+< 		FRLogger.info(end_message);
+---
+>                 FRLogger.info(end_message);
+121c119
+< 		FRLogger.info(end_message);
+---
+>                 FRLogger.info(end_message);
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/interactive/InteractiveActionThread.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/interactive/InteractiveActionThread.java
+49a50
+>         FRLogger.plop("InteractiveActionThread get_autoroute_instance");
+54a56,57
+>         FRLogger.plop("InteractiveActionThread get_batch_autorouter_instance");
+>         
+59a63
+>         FRLogger.plop("InteractiveActionThread get_fanout_instance");
+64a69
+>         FRLogger.plop("InteractiveActionThread get_pull_tight_instance");
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/interactive/Settings.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/interactive/Settings.java
+58a59
+>         check_continue = false;
+78a80,81
+>         
+>         this.check_continue = p_settings.check_continue;
+147c150
+<     
+---
+>     public boolean check_continue;
+diff -r freerouting_cli-1/src/main/java/eu/mihosoft/freerouting/logger/FRLogger.java kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/logger/FRLogger.java
+14c14
+< import eu.mihosoft.freerouting.FreeRouting;
+---
+> //import eu.mihosoft.freerouting.FreeRouting;
+20a21,23
+> import eu.mihosoft.freerouting.logger.MessageServer;
+> 
+> 
+23c26,28
+< 
+---
+>     
+>     public static boolean use_message_server = false;
+>     
+29a35,52
+>     public static void send_message(String type, String msg) {
+>         //System.out.println(type+": "+msg);
+>         if (use_message_server) {
+>         
+>             try {
+>                 MessageServer.getInstance().send_message(type,msg, type=="plop" || type=="error");
+>             } catch (Exception ex) {
+>                 System.err.println("MessageServer failed "+ex);
+>                 System.err.println(type+": "+msg);
+>                 System.exit(1);
+>             }
+>         } else {
+>             System.out.println("--FRCLI--"+type.toUpperCase()+"--"+msg);
+>         }
+>     }
+>             
+> 
+> 
+48c71,72
+<         System.out.println("--FRCLI--TRACE--Method '" + perfId.replace("{}", result != null ? result.toString() : "(null)") + "' was performed in " + performanceFormat.format(timeElapsed/1000.0) + " seconds.");
+---
+>         //System.out.println("--FRCLI--TRACE--Method '" + perfId.replace("{}", result != null ? result.toString() : "(null)") + "' was performed in " + performanceFormat.format(timeElapsed/1000.0) + " seconds.");
+>         send_message("trace", "Method '" + perfId.replace("{}", result != null ? result.toString() : "(null)") + "' was performed in " + performanceFormat.format(timeElapsed/1000.0) + " seconds.");
+50a75,79
+>     public static void plop(String msg)
+>     {
+>         //System.out.println("--FRCLI--PLOP--" + msg);
+>         send_message("plop",msg);
+>     }
+53c82,83
+<         System.out.println("--FRCLI--INFO--" + msg);
+---
+>         //System.out.println("--FRCLI--INFO--" + msg);
+>         send_message("info",msg);
+58c88,89
+<         System.out.println("--FRCLI--WARN--" + msg);
+---
+>         //System.out.println("--FRCLI--WARN--" + msg);
+>         send_message("warn",msg);
+65c96,97
+<             System.out.println("--FRCLI--DEBUG--" + msg);
+---
+>             //System.out.println("--FRCLI--DEBUG--" + msg);
+>             send_message("debug",msg);
+73c105,106
+<             System.out.println("--FRCLI--VALIDATE--" + msg);
+---
+>             //System.out.println("--FRCLI--VALIDATE--" + msg);
+>             send_message("validate",msg);
+79c112,113
+< 	System.out.println("--FRCLI--PROGRESS--" + msg + ": " + count + "/" + total);
+---
+>         //System.out.println("--FRCLI--PROGRESS--" + msg + ": " + count + "/" + total);
+>         send_message("progress",msg+": "+count + "/" + total);
+85c119,120
+<             System.out.println("--FRCLI--ERROR--" + msg);
+---
+>             //System.out.println("--FRCLI--ERROR--" + msg);
+>             send_message("error",msg);
+88c123,124
+<             System.out.println("--FRCLI--ERROR--" + msg + " : " + t);
+---
+>             //System.out.println("--FRCLI--ERROR--" + msg + " : " + t);
+>             send_message("error",msg+" : " + t);
+97c133
+< 
+---
+>     
+119a156,162
+>     public static void setUseMessageServer(boolean _use_message_server)
+>     {
+>         use_message_server = _use_message_server;
+>         plop("use_message_server = "+use_message_server);
+>     }
+>     
+>     
+Only in kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java/eu/mihosoft/freerouting/logger: MessageServer.java
+Only in kicad-freerouting-plugin-alt/freerouting_cli_stdout/src/main/java: org

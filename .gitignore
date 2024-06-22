@@ -1,3 +1,10 @@
+freerouting_cli_stdout/build/obj/
+freerouting_cli_stdout/build/Constants.java
+freerouting_cli_stdout/build/MANIFEST.MF
+
+freerouting_alt/*
+freerouting_alt.zip
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

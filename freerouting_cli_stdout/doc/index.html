@@ -1,0 +1,43 @@
+<html>
+<body>
+<H1> freerouting_cli </h1>
+<p>
+This is a fork of freerouting from
+<a href="https://github.com/freerouting/freerouting">github.com/freerouting.</a>
+The intent of the
+project is to maintain a headless command line version with no GUI enabling
+it to be used as an external background router for pcb-rnd more easily.
+<p>
+Project source: svn://svn.repo.hu/freerouting_cli/trunk
+<p>
+Contact the authors: <a href="http://igor2.repo.hu/contact.html">Email or chat </a>
+<p>
+The java code of this fork is maintained by Erich S. Heinzle, the build
+system is maintained by Tibor 'Igor2' Palinkas.
+<p>
+This fork is being actively tested with the FOSS PCB layout editor
+<a href="http://www.repo.hu/projects/pcb-rnd">pcb-rnd</a>.
+
+<h2> Downloads </h2>
+<p>
+<table border=1 cellspacing=0>
+	<tr><th> Binary pack <br> no Java install required
+	    <td> Download <a href="">TODO</a> and unpack it in /opt<sup>1</sup>; works only on x86_64, requires GNU libc version >=2.31
+	<tr><th> Jar release <br> requires jre from openjdk (11 or newer) installed
+	    <td> Download <a href="">TODO</a> and unpack it in /opt<sup>1</sup>; works only on any platform
+	<tr><th> Source release <br> requires full openjdk (11 or newer) installed
+	    <td> Download <a href="releases/">a release tarball</a>, unpack it in your home directory and read INSTALL.
+</table>
+<p>
+Notes: <sup>1</sup> can be unpacked anywhere else, but pcb-rnd will then need to be configured with the new location; config node is plugins/ar_extern/freerouting_cli/installation
+
+<h2> Documentation </h2>
+<ul>
+	<li> <a href="cli.html">command line arguments</a>
+	<li> <a href="about.html">About the router</a>
+	<li> <a href="howto.html">How to use it in practice</a>
+	<li> The original help (<a href="helpset/en">en</a> and <a href="helpset/de">de</a>).
+</ul>
+
+</body>
+</html>

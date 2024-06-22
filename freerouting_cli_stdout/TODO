@@ -1,0 +1,154 @@
+TODO
+
+1) increase number of cli settable parameters/flags:
+
+some of the settings are gui related and will not to be settable
+
+default parameters in Settings.java
+
+        // Initialise with default values.
+        layer = 0;
+        push_enabled = true;
+        drag_components_enabled = true;
+        select_on_all_visible_layers = true; // else selection is only on the current layer
+        is_stitch_route = false; // else interactive routing is dynamic
+        trace_pull_tight_region_width = Integer.MAX_VALUE;
+        trace_pull_tight_accuracy = 500;
+        via_snap_to_smd_center = true;
+        horizontal_component_grid = 0;
+        vertical_component_grid = 0;
+        automatic_neckdown = true;
+        hilight_routing_obstacle = false;
+        autoroute_settings = new AutorouteSettings(p_board);
+
+2) parameters set on DSN load
+ 
+parameters in designforms/specctra/AutorouteSettings.java
+
+        dsn_fanout_requested
+        dsn_autoroute_requested
+        dsn_postroute_requested
+
+3) example of .rules file exported from GUI:
+
+composed of sections:
+
+defining "snap_angle"
+defining "autoroute_settings"
+clearance rules for nets in design + default ?trace width "rule"
+a padstack definition for a via "padstack"
+mappings of named design padstacks to defined padstack and electrical nets "via"
+inverse mapping from electrical nets to named padstacks "via_rule"
+then net_class specific rules "class" defining nets, widths, layers, clearance rule, vias to use
+
+==============
+
+(rules PCB pic_programmer
+  (snap_angle 
+    fortyfive_degree
+  )
+  (autoroute_settings
+    (fanout off)
+    (eu.mihosoft.freerouting.autoroute on)
+    (postroute on)
+    (vias on)
+    (via_costs 50)
+    (plane_via_costs 5)
+    (start_ripup_costs 100)
+    (start_pass_no 1)
+    (layer_rule "top_layer"
+      (active on)
+      (preferred_direction horizontal)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 2.6)
+    )
+    (layer_rule "bottom_layer"
+      (active on)
+      (preferred_direction vertical)
+      (preferred_direction_trace_costs 1.0)
+      (against_preferred_direction_trace_costs 1.6)
+    )
+  )
+  (rule
+    (width 500.0)
+    (clear 250.2)
+    (clear 250.0 (type smd_to_turn_gap))
+    (clear 280.2 (type default_POWER))
+    (clear 62.6 (type smd_smd))
+    (clear 280.2 (type smd_POWER))
+    (clear 280.2 (type "kicad_default"_POWER))
+    (clear 280.2 (type POWER_POWER))
+  )
+  (padstack "Via[0-1]_1600:600_um"
+    (shape
+      (circle "top_layer" 1600.0 0.0 0.0)
+    )
+    (shape
+      (circle "bottom_layer" 1600.0 0.0 0.0)
+    )
+    (attach off)
+  )
+  (via 
+    "Via[0-1]_1600:600_um" "Via[0-1]_1600:600_um" default
+  )
+  (via 
+    "Via[0-1]_1600:600_um-kicad_default" "Via[0-1]_1600:600_um" "kicad_default"
+  )
+  (via 
+    "Via[0-1]_1600:600_um-POWER" "Via[0-1]_1600:600_um" POWER
+  )
+  (via_rule
+    default "Via[0-1]_1600:600_um"
+  )
+  (via_rule
+    "kicad_default" "Via[0-1]_1600:600_um-kicad_default"
+  )
+  (via_rule
+    POWER "Via[0-1]_1600:600_um-POWER"
+  )
+  (class default
+    (clearance_class default)
+    (via_rule default)
+    (rule
+      (width 500.0)
+    )
+    (circuit 
+      (use_layer top_layer bottom_layer)
+    )
+  )
+  (class "kicad_default"
+    /CTS /DTR "/PC-CLOCK-OUT" /TXD "Net-(C2-Pad1)" "Net-(C4-Pad1)" "Net-(C5-Pad1)" "Net-(C9-Pad2)"
+    "Net-(D11-Pad1)" "Net-(D11-Pad2)" "Net-(Q1-Pad2)" "Net-(Q2-Pad3)" "Net-(Q3-Pad2)" "Net-(R12-Pad1)" "Net-(R13-Pad1)" "Net-(R15-Pad1)"
+    "Net-(R16-Pad1)" "Net-(R8-Pad1)" "Net-(RV1-Pad2)" VPP "/pic_sockets/VCC_PIC" "Net-(D1-Pad2)" "Net-(D4-Pad2)" "Net-(D8-Pad2)"
+    "Net-(D9-Pad2)" "Net-(D12-Pad2)" /VPP/MCLR "/CLOCK-RB6" "/DATA-RB7" "Net-(D2-Pad2)" "Net-(D6-Pad2)" "Net-(D10-Pad2)"
+    "Net-(P3-Pad2)" "Net-(P3-Pad3)" "Net-(P3-Pad4)" "Net-(P3-Pad5)" "Net-(P3-Pad6)" "Net-(P3-Pad7)" "Net-(P3-Pad9)" "Net-(P3-Pad10)"
+    "Net-(P3-Pad13)" "Net-(P3-Pad14)" "Net-(P3-Pad15)" "Net-(P3-Pad16)" "Net-(P3-Pad17)" "Net-(P3-Pad18)" "Net-(P3-Pad19)" "Net-(P3-Pad20)"
+    "Net-(P3-Pad21)" "Net-(P3-Pad22)" "Net-(P3-Pad23)" "Net-(P3-Pad24)" "Net-(P3-Pad25)" "Net-(P3-Pad26)" "Net-(P3-Pad27)" "Net-(P3-Pad28)"
+    "Net-(P3-Pad29)" "Net-(P3-Pad30)" "Net-(P3-Pad33)" "Net-(P3-Pad34)" "Net-(P3-Pad35)" "Net-(P3-Pad36)" "Net-(P3-Pad37)" "Net-(P3-Pad38)"
+    "Net-(J1-Pad1)" "Net-(J1-Pad2)" "Net-(J1-Pad6)" "Net-(J1-Pad9)" "Net-(U6-Pad5)" "Net-(U6-Pad2)" "Net-(U6-Pad3)" "Net-(U1-Pad7)"
+    "Net-(U4-Pad3)" "Net-(U4-Pad4)" "Net-(P2-Pad15)" "Net-(P2-Pad2)" "Net-(P2-Pad16)" "Net-(P2-Pad3)" "Net-(P2-Pad17)" "Net-(P2-Pad4)"
+    "Net-(P2-Pad18)" "Net-(P2-Pad5)" "Net-(P2-Pad6)" "Net-(P2-Pad7)" "Net-(P2-Pad21)" "Net-(P2-Pad22)" "Net-(P2-Pad9)" "Net-(P2-Pad23)"
+    "Net-(P2-Pad10)" "Net-(P2-Pad24)" "Net-(P2-Pad11)" "Net-(P2-Pad25)" "Net-(P2-Pad12)" "Net-(P2-Pad26)" "Net-(P2-Pad13)" "Net-(P2-Pad14)"
+    "Net-(U5-Pad1)" "Net-(U5-Pad10)" "Net-(U5-Pad2)" "Net-(U5-Pad11)" "Net-(U5-Pad3)" "Net-(U5-Pad6)" "Net-(U5-Pad15)" "Net-(U5-Pad7)"
+    "Net-(U5-Pad16)" "Net-(U5-Pad8)" "Net-(U5-Pad17)" "Net-(U5-Pad9)" "Net-(U5-Pad18)"
+    (clearance_class "kicad_default")
+    (via_rule kicad_default)
+    (rule
+      (width 500.0)
+    )
+    (circuit 
+      (use_layer top_layer bottom_layer)
+    )
+  )
+  (class POWER
+    GND VCC
+    (clearance_class POWER)
+    (via_rule POWER)
+    (rule
+      (width 800.0)
+    )
+    (circuit 
+      (use_layer top_layer bottom_layer)
+    )
+  )
+)
