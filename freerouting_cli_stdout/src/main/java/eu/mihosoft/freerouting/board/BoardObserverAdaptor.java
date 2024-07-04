@@ -129,8 +129,8 @@ public class BoardObserverAdaptor implements BoardObservers
         
         /*
         if ((_count - _last_reply_req)>=1000) {
-        
-        //if (_bytes_count > 100000) {
+        */
+        if (_bytes_count > 32768) {
             
             try {
                 FRLogger.plop("BoardObserverAdaptor send_obj with wait, _count="+_count+", _bytes_count="+_bytes_count);
@@ -140,21 +140,24 @@ public class BoardObserverAdaptor implements BoardObservers
             _last_reply_req=_count;
             polyline_obj.key("wait_reply").value(true);
             wait_reply=true;
-        }*/
+        }
         
         polyline_obj.endObject();
         
         _bytes_count += polyline_obj.toString().length();
         
         try {
-        /*    if (wait_reply) {
-                if (MessageServer.getInstance().send_json_expect_one_byte_response(polyline_obj) != 'y'){
-                    throw new IOException("wrong reply");
+            if (wait_reply) {
+                if (MessageServer.getInstance().send_json_expect_one_byte_response(polyline_obj) != '\1'){
+                    if (!MessageServer.getInstance().request_stop() ){
+                    
+                        throw new IOException("wrong reply");
+                    }
                 }
-            } else{*/
+            } else {
                 MessageServer.getInstance().send_json_no_reply(polyline_obj);
-            //}
-        } catch (IOException e) {
+            }
+        } catch (Exception e) {
             //pass
         }
     }

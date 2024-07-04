@@ -36,6 +36,8 @@ import eu.mihosoft.freerouting.logger.MessageServer;
 import eu.mihosoft.freerouting.interactive.BoardHandling;
 
 import java.io.ByteArrayInputStream;
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
@@ -102,6 +104,30 @@ public class MainApplication
                     FRLogger.warn("File with name " +  startupOptions.design_input_filename + " not found");
                     return 1;
                 }
+            } else if (startupOptions.design_input_stdin) {
+                try {
+                    BufferedReader input_stream = new BufferedReader(new InputStreamReader(System.in));
+                    
+                    String design_file_text="";
+                    String line;
+                    try {
+                        while ((line = input_stream.readLine()) != null) {
+                            design_file_text += line;
+                        }
+                    } catch (IOException e) {
+                        FRLogger.warn("reading from stdin failed  "+e);
+                    } finally {
+                        if (input_stream!=null) {
+                            input_stream.close();
+                        }
+                    }
+                    FRLogger.plop("read "+design_file_text.length()+" bytes from stdin");
+                
+                    design_file = new DesignFile("autoroute.dsn", design_file_text);
+                } catch (Exception e) {
+                    FRLogger.warn("design file input from stdin failed  "+e);
+                    return 1;
+                }
             } else {
                 if (!startupOptions.use_message_server) {
                     FRLogger.warn("no input file specified");
@@ -123,7 +149,7 @@ public class MainApplication
                     String design_file_text = reply_obj.getString("design_file_text");
                     String file_name = reply_obj.getString("file_name");
                     design_file = new DesignFile(file_name, design_file_text);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     FRLogger.warn("design file request failed "+e);
                 }
                 

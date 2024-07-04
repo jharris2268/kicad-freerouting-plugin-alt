@@ -34,22 +34,13 @@ class Tracks:
             pcbnew.Refresh()
             return
             
-        net=None
-        if p['object_type']=='track':
-            net = self.track(p)
-        elif p['object_type']=='via':
-            net = self.via(p)
-        else:
-            return
         
-        #if net!=self.curr_net:
-        #    print("refresh",self.curr_net, self.curr_id, self.curr_id-self.last_refresh)
-        #    pcbnew.Refresh()
-        #    self.last_refresh=self.curr_id
-        #    self.curr_net=net
-        #elif (self.curr_id-self.last_refresh) > 10000:
+        if p['object_type']=='track':
+            self.track(p)
+        elif p['object_type']=='via':
+            self.via(p)
+        
         if (self.curr_id-self.last_refresh) >= 1000:
-            #print("\trefresh",self.curr_net, self.curr_id, self.curr_id-self.last_refresh,end='',flush=True)
             pcbnew.Refresh()
             self.last_refresh=self.curr_id
             if self.update_call:
@@ -84,7 +75,14 @@ class Tracks:
         via.SetDrill(widths[1])
         
         return via    
-
+    
+    def all_objs(self):
+        result = []
+        for _,tt in self.tracks.items():
+            result.extend(tt)
+        for _,v in self.vias.items():
+            result.append(v)
+        return result
     
     def track(self, p):
         i = p['id']

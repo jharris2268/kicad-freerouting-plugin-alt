@@ -19,7 +19,7 @@ import java.time.Instant;
 import java.util.HashMap;
 
 import eu.mihosoft.freerouting.logger.MessageServer;
-
+import eu.mihosoft.freerouting.interactive.InteractiveActionThread;
 
 public class FRLogger {
     //private static Logger logger = LogManager.getLogger(FreeRouting.class);
@@ -31,6 +31,18 @@ public class FRLogger {
     private static HashMap<Integer, Instant> perfData = new HashMap<Integer, Instant>();
 
     private static TraceLevel trace_level = TraceLevel.NO_DEBUGGING_OUTPUT;
+    
+    public static void set_interactive_action_thread(InteractiveActionThread thread) {
+        send_message("plop", "set_interactive_action_thread1");
+        if (use_message_server) {
+            try {
+                MessageServer.getInstance().set_interactive_action_thread(thread);
+            } catch (Exception ex) {
+                //pass
+            }
+        }
+    }
+    
 
     public static void send_message(String type, String msg) {
         //System.out.println(type+": "+msg);
@@ -42,6 +54,7 @@ public class FRLogger {
                 System.err.println("MessageServer failed "+ex);
                 System.err.println(type+": "+msg);
                 System.exit(1);
+
             }
         } else {
             System.out.println("--FRCLI--"+type.toUpperCase()+"--"+msg);

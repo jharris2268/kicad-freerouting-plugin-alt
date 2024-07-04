@@ -41,6 +41,7 @@ import eu.mihosoft.freerouting.logger.FRLogger;
 import eu.mihosoft.freerouting.logger.MessageServer;
 import org.json.JSONStringer;
 import org.json.JSONObject;
+
 /**
  * To optimize the vias and traces after the batch autorouter has completed the board.
  * 
@@ -57,8 +58,6 @@ public class BatchOptRoute
         this.thread = p_thread;
         this.routing_board = p_thread.hdlg.get_routing_board();
         this.sorted_route_items = null;
-        
-        
     }
 
     /**
@@ -66,37 +65,31 @@ public class BatchOptRoute
      */
     public void optimize_board()
     {
-        
-        FRLogger.info("Before optimize: Via count: " + pre_optimize_vias + ", trace length: " + pre_optimize_trace_length);
-        boolean route_improved = true;
-        int curr_pass_no = 0;
+        int pre_optimize_vias = routing_board.get_vias().size();
+        double pre_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
+            FRLogger.info("Before optimize: Via count: " + pre_optimize_vias + ", trace length: " + pre_optimize_trace_length);
+            boolean route_improved = true;
+            int curr_pass_no = 0;
         int max_postroute_passes = this.thread.hdlg.settings.autoroute_settings.get_max_postroute_passes();
-        
-        pre_optimize_vias = routing_board.get_vias().size();
-        pre_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
-        
-        use_increased_ripup_costs = true;
+            use_increased_ripup_costs = true;
         FRLogger.info("BatchOptRoute.optimize_board():Current pass no: " + curr_pass_no);
-        //while (route_improved)
+            //while (route_improved)
         while (route_improved && max_postroute_passes > curr_pass_no) {
-            
-            if (!check_continue_optomize(curr_pass_no)) {
+            if (!check_continue_optomize(curr_pass_no, pre_optimize_vias, pre_optimize_trace_length)) {
                 break;
             }
-            
-            
             
             FRLogger.progress("post_route: ", curr_pass_no, max_postroute_passes);
             ++curr_pass_no;
             boolean with_prefered_directions = (curr_pass_no % 2 != 0); // to create more variations
             route_improved = opt_route_pass(curr_pass_no, with_prefered_directions);
-        }
         
+        }
         FRLogger.progress("post_route: ", max_postroute_passes, max_postroute_passes);
         int post_optimize_vias = routing_board.get_vias().size();
-        double post_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
+            double post_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
         FRLogger.info("After optimize: Via count: " + post_optimize_vias + ", trace length: " + post_optimize_trace_length);
-        if (this.pre_optimize_vias == 0) {
+        if (pre_optimize_vias == 0) {
             FRLogger.info("reduction in vias: 0%");
         } else {
             FRLogger.info("reduction in vias: " + (1.0 - 1.0*post_optimize_vias/pre_optimize_vias));
@@ -104,36 +97,37 @@ public class BatchOptRoute
         FRLogger.info("reduction in trace length: " + (1.0 - post_optimize_trace_length/pre_optimize_trace_length) + "%");
     }
     
-    private boolean check_continue_optomize(int curr_pass_no) {
-        
-        if (!FRLogger.use_message_server) {
-            return true;
-        }
-        if (!this.thread.hdlg.get_settings().check_continue) {
-            return true;
-        }
-        try {    
-            int post_optimize_vias = routing_board.get_vias().size();
-            double post_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
-            JSONStringer request_obj = MessageServer.getInstance().start_message("request");
-            request_obj.key("request_type").value("continue_optimize");
-            request_obj.key("curr_pass_no").value(curr_pass_no);
-            request_obj.key("pre_optimize_num_vias").value(pre_optimize_vias);
-            request_obj.key("pre_optimize_trace_length").value(pre_optimize_trace_length);
-            
-            request_obj.key("post_optimize_vias").value(post_optimize_vias);
-            request_obj.key("post_optimize_trace_length").value(post_optimize_trace_length);
-            request_obj.key("wait_reply").value(true);
-            request_obj.endObject();
-            
-            JSONObject reply_obj = MessageServer.getInstance().send_json_expect_json_reply(request_obj);
-            return reply_obj.has("continue") && reply_obj.getBoolean("continue");
-        } catch (Exception e) {
-            FRLogger.error(e.toString(), e);
-            return true;
-        }
-    }
-     
+    private boolean check_continue_optomize(int curr_pass_no, double pre_optimize_vias, double pre_optimize_trace_length) {
+         
+         if (!FRLogger.use_message_server) {
+             return true;
+         }
+         if (!this.thread.hdlg.get_settings().check_continue) {
+             return true;
+         }
+         try {    
+             int post_optimize_vias = routing_board.get_vias().size();
+             double post_optimize_trace_length = Math.round(routing_board.cumulative_trace_length());
+             JSONStringer request_obj = MessageServer.getInstance().start_message("request");
+             request_obj.key("request_type").value("continue_optimize");
+             request_obj.key("curr_pass_no").value(curr_pass_no);
+             request_obj.key("pre_optimize_num_vias").value(pre_optimize_vias);
+             request_obj.key("pre_optimize_trace_length").value(pre_optimize_trace_length);
+             
+             request_obj.key("post_optimize_vias").value(post_optimize_vias);
+             request_obj.key("post_optimize_trace_length").value(post_optimize_trace_length);
+             request_obj.key("wait_reply").value(true);
+             request_obj.endObject();
+             
+             JSONObject reply_obj = MessageServer.getInstance().send_json_expect_json_reply(request_obj);
+             return reply_obj.has("continue") && reply_obj.getBoolean("continue");
+         } catch (Exception e) {
+             FRLogger.error(e.toString(), e);
+             return true;
+         }
+     }
+
+
     /**
      * Pass to reduce the number of vias an to shorten the trace length a completely routed board.
      * Returns true, if the route was improved.
@@ -142,19 +136,19 @@ public class BatchOptRoute
     {
         boolean route_improved = false;
         int via_count_before = this.routing_board.get_vias().size();
-	//System.out.println("via_count_before: " + via_count_before);
-	//System.out.println("cumulative_trace_length(): " + this.routing_board.cumulative_trace_length());
-        //System.out.println("this.thread.hdlg" + this.thread.hdlg);
-	//System.out.println("this.thread.hdlg.cooridinate_transform" + this.thread.hdlg.coordinate_transform);
-	double trace_length_before = this.thread.hdlg.coordinate_transform.board_to_user(this.routing_board.cumulative_trace_length());
-	//System.out.println("trace_length_before: " + trace_length_before);
-        //this.thread.hdlg.screen_messages.set_post_route_info(via_count_before, trace_length_before);
+        //System.out.println("via_count_before: " + via_count_before);
+        //System.out.println("cumulative_trace_length(): " + this.routing_board.cumulative_trace_length());
+            //System.out.println("this.thread.hdlg" + this.thread.hdlg);
+        //System.out.println("this.thread.hdlg.cooridinate_transform" + this.thread.hdlg.coordinate_transform);
+        double trace_length_before = this.thread.hdlg.coordinate_transform.board_to_user(this.routing_board.cumulative_trace_length());
+        //System.out.println("trace_length_before: " + trace_length_before);
+            //this.thread.hdlg.screen_messages.set_post_route_info(via_count_before, trace_length_before);
         this.sorted_route_items = new ReadSortedRouteItems();
         this.min_cumulative_trace_length_before = calc_weighted_trace_length(routing_board);
         int ii=0;
-        for (;;)
-        {
+        while (true) {
             FRLogger.progress("optimize route item",ii,this.routing_board.item_list.size());
+            
             if (this.thread.is_stop_requested())
             {
                 return route_improved;
@@ -179,14 +173,14 @@ public class BatchOptRoute
         return route_improved;
     }
 
+    
+
+
     /**
      * Trie to improve the route by retouting the connections containing p_item.
      */
     private boolean opt_route_item(Item p_item, int p_pass_no, boolean p_with_prefered_directions)
     {
-        
-        
-        
         this.thread.hdlg.remove_ratsnest();
         int incomplete_count_before = this.thread.hdlg.get_ratsnest().incomplete_count();
         int via_count_before = this.routing_board.get_vias().size();
@@ -450,9 +444,5 @@ public class BatchOptRoute
         }
         private FloatPoint min_item_coor;
         private int min_item_layer;
-        
     }
-    
-    private int pre_optimize_vias;
-    private double pre_optimize_trace_length;
 }

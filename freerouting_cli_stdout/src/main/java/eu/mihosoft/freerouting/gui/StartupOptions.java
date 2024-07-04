@@ -29,7 +29,7 @@ public class StartupOptions {
     int trace_level = 0;
     boolean use_message_server = false;
     boolean check_continue=false;
-    
+    boolean design_input_stdin = false;
     
     private StartupOptions() {
     }
@@ -48,11 +48,17 @@ public class StartupOptions {
                     if (p_args.length > i + 1 && !p_args[i + 1].startsWith("-")) {
                         single_design_option = true;
                         design_input_filename = p_args[i + 1];
+                        if (design_input_stdin) {
+                            throw new Exception("-de/-di and -dx set?");
+                        }
                     }
                 } else if (p_args[i].startsWith("-di")) {
                     // the design directory is provided
                     if (p_args.length > i + 1 && !p_args[i + 1].startsWith("-")) {
                         design_input_directory_name = p_args[i + 1];
+                        if (design_input_stdin) {
+                            throw new Exception("-de/-di and -dx set?");
+                        }
                     }
                 } else if (p_args[i].startsWith("-do")) {
                     if (p_args.length > i + 1 && !p_args[i + 1].startsWith("-")) {
@@ -89,6 +95,13 @@ public class StartupOptions {
                 
                 } else if (p_args[i].startsWith("-cc")) {
                     check_continue=true;
+                } else if (p_args[i].startsWith("-dx")) {
+                    single_design_option=true;
+                    if ((design_input_filename!=null) || (design_input_directory_name!=null)) {
+                        throw new Exception("-de/-di and -dx set?");
+                    }
+                    design_input_filename = null;
+                    design_input_stdin=true;
                 }
             }
             catch (Exception e)

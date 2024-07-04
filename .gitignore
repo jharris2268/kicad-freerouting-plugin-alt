@@ -7,6 +7,14 @@ plugin/gui/dialog_base.py
 freerouting_alt/plugins/*
 freerouting_alt.zip
 
+*.dsn
+*.ses
+*.kicad_pcb
+*.kicad_sch
+*.kicad_prl
+*.kicad_pro
+*.rules
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

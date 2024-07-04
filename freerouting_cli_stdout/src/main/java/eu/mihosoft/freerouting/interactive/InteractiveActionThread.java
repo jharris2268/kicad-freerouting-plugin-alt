@@ -30,6 +30,7 @@ import eu.mihosoft.freerouting.logger.FRLogger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.lang.ref.WeakReference;
 
 /**
  * Used for running an interactive action in a separate thread,
@@ -74,6 +75,7 @@ public abstract class InteractiveActionThread extends Thread implements eu.mihos
     protected InteractiveActionThread(BoardHandling p_board_handling)
     {
         this.hdlg = p_board_handling;
+        FRLogger.set_interactive_action_thread(this);
     }
 
     protected abstract void thread_action();
@@ -103,6 +105,7 @@ public abstract class InteractiveActionThread extends Thread implements eu.mihos
         private AutorouteThread(BoardHandling p_board_handling)
         {
             super(p_board_handling);
+            
         }
 
         protected void thread_action()

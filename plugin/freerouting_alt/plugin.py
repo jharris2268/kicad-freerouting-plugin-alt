@@ -7,6 +7,7 @@ from . import dsn_exporter
 from .dialog_base import FreeroutingAltBase
 import wx
 
+
 def autorouter_continue_dialog(m):
     return {'continue':True}
 
@@ -34,6 +35,7 @@ class Selection:
         self.objs={}
         self.tracks=[]
         self.box = [0,0,0,0]
+        self.message_receiver=None
     
     def init(self):
         self.objs = {}
@@ -77,8 +79,9 @@ class PluginDialog(FreeroutingAltBase):
         self.last_update_time=0
         
         self._process = None
-        
-        
+        self.is_running=False
+        self.remove_objs=None
+        self.added_objs=None
     
     def get_process(self):
         return self._process
@@ -96,10 +99,11 @@ class PluginDialog(FreeroutingAltBase):
         self.all_msgs = []
         self.update(True)
         
+        self.save_dsn_button.Bind( wx.EVT_BUTTON, self.on_save_dsn )
         self.save_log_button.Bind( wx.EVT_BUTTON, self.on_save_log )
         self.close_button.Bind( wx.EVT_BUTTON, self.on_close )
-        self.run_button.Bind( wx.EVT_BUTTON, self.run )
-        
+        self.run_button.Bind( wx.EVT_BUTTON, self.on_run )
+        self.revert_button.Bind(wx.EVT_BUTTON, self.on_revert)
         self.SetFocus()
         
         
@@ -114,18 +118,17 @@ class PluginDialog(FreeroutingAltBase):
             force=True
             self.info_text.SetLabel(msg['msg'])
         
-        mm = "%10d %6.1fs %s: %-200.200s" % (msg['index'], msg['time']/1000000000, msg['msg_type'], msg['msg'])
+        mm = "%d\t\t%7.1fs\t%s:\t%-200.200s" % (msg['index'], msg['time']/1000000000, msg['msg_type'], msg['msg'])
         self.all_msgs.append(mm)
         
         self.curr[-1]=mm
-        if msg['msg_type']=='info':
+        if msg['msg_type'] in ('info',):
             self.curr.append("")
             
         txt="\n".join(self.curr)
         self.logging_text.SetValue(txt)
         
-        self.logging_text.ShowPosition(sum(len(r)+1 for r in self.curr[:-1])+1)
-        #self.progress_text.MarkDirty()
+        self.logging_text.ShowPosition(len(txt)-len(self.curr[-1])+1) #first character of last line
         
         
         self.update(force)
@@ -168,9 +171,14 @@ class PluginDialog(FreeroutingAltBase):
         wx.Yield()
     
     def on_close(self, event):
+        if self.is_running:
+            if self.message_receiver is not None:
+                self.message_receiver.cancel()
+        
+        
         if self._process:
             try:
-                self._process.wait(0.1)
+                self._process.wait(0.5)
             except subprocess.TimeoutExpired:
                 self._process.kill()
             except Exception as ex:
@@ -179,8 +187,10 @@ class PluginDialog(FreeroutingAltBase):
         self.EndModal(wx.ID_OK)
     
     def on_save_log(self, event):
-        with wx.FileDialog(self, "Save text file", wildcard="text files (*.txt)|*.txt",
-                       style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+        with wx.FileDialog(self, "Save text file",
+            wildcard="text files (*.txt)|*.txt",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
+
 
             if fileDialog.ShowModal() == wx.ID_CANCEL:
                 return     # the user changed their mind
@@ -193,8 +203,28 @@ class PluginDialog(FreeroutingAltBase):
             except IOError:
                 wx.LogError("Cannot save current data in file '%s'." % pathname)
     
-    def run(self, event):
+    def on_save_dsn(self, event):
+        curr_filename = self.board.GetFileName()
+        suggested_filename = os.path.splitext(curr_filename)[0]+'.dsn'
+        with wx.FileDialog(self, "Save text file",
+            wildcard="specctra dsn files (*.dsn)|*.dsn",
+            style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT,
+            defaultFile = suggested_filename) as fileDialog:
         
+        
+            if fileDialog.ShowModal() == wx.ID_CANCEL:
+                return     # the user changed their mind
+
+            # save the current contents in the file
+            pathname = fileDialog.GetPath()
+            try:
+                with open(pathname, 'w') as file:
+                    
+                    file.write(self.prep_dsn_text())
+            except IOError:
+                wx.LogError("Cannot save current data in file '%s'." % pathname)
+    
+    def prep_dsn_text(self):
         dsn_obj=''
         if self.selection.has_selection and self.route_within_zones_checkbox.IsChecked():
             dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board,
@@ -203,15 +233,45 @@ class PluginDialog(FreeroutingAltBase):
                 selected_tracks=self.selection.tracks,
                 box=self.selection.box
             )
+            
         else:
-            dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board)
+            fixed_wiring=True
+            if self.board.GetConnectivity().GetUnconnectedCount(True)==0 and int(self.optimize_combobox.GetValue())>0:
+                fixed_wiring=False
+            
+            dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board, fixed_wiring=fixed_wiring)
         
-        dsn_text=str(dsn_obj)+'\n'
+        return str(dsn_obj)+'\n'
+    
+    def on_run(self, event):
+        if self.is_running:
+            if self.message_receiver is not None:
+                self.message_receiver.cancel()
+            
+            return
+        
+        else:
+            
+            self.run_button.SetLabel("Stop")
+            self.is_running=True
+            self.call_run()
+            
+    def on_revert(self, event):
+        self.revert_objs()
+        self.update(True)
+        
+        
+    
+    def call_run(self):
+        
         
         board_filename = self.board.GetFileName()
         fanout = self.fanout_checkbox.IsChecked()
         autoroute_passes = 5000 if self.autoroute_checkbox.IsChecked() else 0
         optimize_passes = int(self.optimize_combobox.GetValue())
+        
+        dsn_text=self.prep_dsn_text()
+
         #print("fanout?",fanout, "autoroute passes", autoroute_passes, "optimize passes", optimize_passes)
         self.curr=['']
         self.all_msgs=[]
@@ -220,6 +280,7 @@ class PluginDialog(FreeroutingAltBase):
         #jar_file = os.path.join(os.path.dirname(__file__), 'freerouting_sockets.jar')
         jar_file = os.path.join(os.path.dirname(__file__), 'freerouting_stdout.jar')
         
+        #args = ['java','-jar',jar_file,'-ms','-ap',str(autoroute_passes)]
         args = ['java','-jar',jar_file,'-ms','-ap',str(autoroute_passes)]
         
         if fanout:
@@ -232,17 +293,21 @@ class PluginDialog(FreeroutingAltBase):
         
         print(args, board_filename, repr(dsn_text)[:50], len(dsn_text))
         
-        remove_objs = []
+        self.remove_objs = []
         if self.selection.has_selection:
-            remove_objs = self.selection.tracks
+            self.remove_objs = self.selection.tracks
         else:
-            remove_objs=list(self.board.Tracks())
+            self.remove_objs=list(self.board.Tracks())
         
-        for i in remove_objs:
+        for i in self.remove_objs:
             self.board.Remove(i)
         
+        
         self._process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
-        time.sleep(0.2)
+        #self._process.stdin.write(dsn_text.encode('utf-8'))
+        #self._process.stdin.flush()
+        #time.sleep(0.2)
+        
         
         tracks=Tracks(self.board, self.update)
         requests = {
@@ -251,15 +316,36 @@ class PluginDialog(FreeroutingAltBase):
             'continue_optimize': optimizer_continue_dialog,
         }
         
-        message_receiver = MessageReceiver(tracks, self.handle_message, requests, self.get_process)
-        message_receiver.read_all()
-                        
+        self.message_receiver = MessageReceiver(tracks, self.handle_message, requests, self.get_process)
+        self.message_receiver.read_all()
+        
+        
         self.get_process().wait()
         self.update(True)
-        print(tracks)
+        #print(tracks)
+        self.added_objs = tracks.all_objs()
+        self.revert_button.Enable()
+        
+        self.message_receiver=None
         self._process = None
+        self.is_running=False
+        self.run_button.SetLabel("Run")
+        pcbnew.Refresh()
         #self.EndModal(wx.ID_OK)
-
+        
+    def revert_objs(self):
+        
+        if self.added_objs:
+            for o in self.added_objs:
+                self.board.Remove(o)
+            
+            
+        if self.remove_objs:
+            for o in self.remove_objs:
+                self.board.Add(o)
+        pcbnew.Refresh()
+        self.added_objs, self.remove_objs = None, None
+        self.revert_button.Disable()
 
 class FreeroutingAlt(pcbnew.ActionPlugin):
     """

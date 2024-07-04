@@ -19,14 +19,23 @@ class MessageReceiver:
         self.responses=responses
         
         self.get_process = get_process 
-
+        self.cancel_set=False
+        self.replies_sent=0
 
     def read_all(self):
         while True:
             if not self.read_next():
                 return
     
+    def cancel(self):
+        self.cancel_set=True
     
+    def handle_wait_reply(self, proc, msg):
+        if msg.get('wait_reply')==True:
+            print(f"\rsend reply (cancel_set={self.cancel_set}, replies_sent={self.replies_sent})",flush=True,end='')
+            proc.stdin.write(b'\0\0\0\1\0' if self.cancel_set else b'\0\0\0\1\1')
+            proc.stdin.flush()
+            self.replies_sent+=1
         
     
     def read_next(self):
@@ -34,35 +43,31 @@ class MessageReceiver:
         if proc is None:
             return False
 
-        a,b = read_exact(proc.stdout, 2)
         
-        ln = a*256+b
-        msg_bytes = read_exact(proc.stdout, ln)
+        ln,msg_bytes=None,None
+        
         
         try:
+            
+            ln, = struct.unpack('>L',read_exact(proc.stdout, 4))
+            msg_bytes = read_exact(proc.stdout, ln)
+            
             msg = json.loads(msg_bytes.decode('utf-8'))
             
             if msg['type'] == 'message':
                 self.message_handler(msg)
-                if msg.get('wait_reply')==True:
-                    proc.stdin.write(b'\0\1\1')
-                    proc.stdin.flush()
-                
+                self.handle_wait_reply(proc, msg)
                 return True
                 
             elif msg['type'] == 'finished':
-                if msg.get('wait_reply')==True:
-                    proc.stdin.write(b'\0\1\1')
-                    proc.stdin.flush()
+                self.handle_wait_reply(proc, msg)
                 self.board_handler(None)
                 self.message_handler(None)
                 print()
                 return False
                 
             elif msg['type'] == 'board_notify':
-                if msg.get('wait_reply')==True:
-                    proc.stdin.write(b'\0\1\1')
-                    proc.stdin.flush()
+                self.handle_wait_reply(proc, msg)
                 self.board_handler(msg)
                 
                 return True
@@ -94,5 +99,8 @@ class MessageReceiver:
             
             return True
         except Exception as ex:
-            print("problem with ",a,b,ln,msg_bytes,len(msg_bytes))
-            raise ex
+            print("problem with ",ln,msg_bytes,len(msg_bytes or []))
+            #if not self.get_process() is None:
+            #    print("problem with ",ln,msg_bytes,len(msg_bytes or []))
+            #    raise ex
+        return False

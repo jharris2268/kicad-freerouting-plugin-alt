@@ -10,6 +10,8 @@ import java.util.concurrent.locks.ReentrantLock;
 import org.json.JSONStringer;
 import org.json.JSONObject;
 
+import java.lang.ref.WeakReference;
+import eu.mihosoft.freerouting.interactive.InteractiveActionThread;
 
 public class MessageServer {
     // Static variable reference of single_instance
@@ -33,6 +35,25 @@ public class MessageServer {
     private long start_time;
     
     private final ReentrantLock lock = new ReentrantLock();
+    private WeakReference<InteractiveActionThread> interactive_action_thread=null;
+    
+    public synchronized void set_interactive_action_thread(InteractiveActionThread thread) {
+        try{ 
+            send_message("plop","set_interactive_action_thread",false);
+        } catch (Exception e) {}
+        interactive_action_thread = new WeakReference(thread);
+    }
+    
+    public synchronized  boolean request_stop() {
+        
+        if (interactive_action_thread!=null) {
+            if (interactive_action_thread.get() != null) {
+                interactive_action_thread.get().request_stop();
+                return true;
+            }
+        }
+        return false;
+    }
     
     public synchronized void send_json_no_reply(JSONStringer obj) throws IOException {
         
@@ -54,7 +75,11 @@ public class MessageServer {
         String msg = obj.toString();
         
         long t1 = System.nanoTime();
-        oos.writeUTF(msg);
+        //oos.writeUTF(msg);
+        byte[] bytes = msg.getBytes("UTF8");        
+        oos.writeInt(bytes.length);
+        oos.write(bytes,0,bytes.length);
+        
         oos.flush();
         long t2= System.nanoTime();
         
@@ -62,15 +87,17 @@ public class MessageServer {
         _send_message_time += (t2-t1);
     }
     
-    public synchronized byte send_json_expect_one_byte_response(JSONStringer obj) throws IOException {
+    private synchronized byte[] send_json_receive_reply(JSONStringer obj) {
         lock.lock();
-        byte reply=0;
+        byte[] reply=null;
         
         try {        
             send_json_common(obj);
         
             long t2= System.nanoTime();
-            reply = ois.readByte();
+            int ln = ois.readInt();
+            reply = new byte[ln];
+            ois.readFully(reply);
             long t3 = System.nanoTime();
             
             _recv_reply_time += (t3-t2);
@@ -84,39 +111,32 @@ public class MessageServer {
         return reply;
     }
     
-    public synchronized JSONObject send_json_expect_json_reply(JSONStringer obj) throws IOException {
+    public synchronized byte send_json_expect_one_byte_response(JSONStringer obj) throws Exception {
+        byte[] reply = send_json_receive_reply(obj);
+        if (reply.length!=1) {
+            throw new Exception("recieved "+reply.length+" bytes, expected 1");
+        }
+        return reply[0];
+            
+    }
+    
+    public synchronized JSONObject send_json_expect_json_reply(JSONStringer obj) throws Exception {
         JSONObject reply=null;
-        
-        lock.lock();
-        
-        
-        try {        
-        //send_json_no_reply(obj);
-            send_json_common(obj);
-            
-            long t2= System.nanoTime();
-            //String reply_string = ois.readUTF();
-            int ln = ois.readInt();
-            byte[] reply_bytes = new byte[ln];
-            ois.readFully(reply_bytes);        
-            
+        byte[] reply_bytes = send_json_receive_reply(obj);
+        try {
             long t3 = System.nanoTime();
             
             String reply_string = new String(reply_bytes, "UTF-8");
             reply = new JSONObject(reply_string);       
             long t4 = System.nanoTime();
             
-            _recv_reply_time += (t3-t2);
-            _recv_proc_time += (t4-t2);
+            _recv_proc_time += (t4-t3);
         } catch (IOException ex) {
-            System.out.println("MessageServer failed, exit");
-            System.exit(1);
-        } finally {
-            lock.unlock();
+            throw new Exception("recieved "+reply_bytes.length+" bytes, expected JSON object");
         }
         
         return reply;
-    }   
+    }
     
     public synchronized boolean send_finished() throws IOException {
         JSONStringer obj = start_message("finished");
@@ -147,21 +167,24 @@ public class MessageServer {
         
         message_obj.key("msg_type").value(type);
         message_obj.key("msg").value(msg);  
-        //if (wait_reply) {
-        //    message_obj.key("wait_reply").value(true);
-        //}
+        if (wait_reply) {
+            message_obj.key("wait_reply").value(true);
+        }
         message_obj.endObject();
         
-        /*if (wait_reply) {
+        if (wait_reply) {
             byte reply = send_json_expect_one_byte_response(message_obj);
                     
             
-            if (reply != 'y') {
-                throw new Exception("incorrect reply " + reply);
+            if (reply != '\1') {
+                if (!request_stop()) {
+                
+                    throw new Exception("incorrect reply " + reply);
+                }
             }
-        } else {*/
+        } else {
             send_json_no_reply(message_obj);
-        //}
+        }
         
     }
     public static synchronized String stats() {

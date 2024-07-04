@@ -61,7 +61,7 @@ def LV(val, nd=1):
     return LA(fmt % (val/1000,))
     
 
-def board_to_dsn(filename, board, include_zones=False, inc_outlines=False, selected_pads=None, selected_tracks=None, box=None):
+def board_to_dsn(filename, board, include_zones=False, inc_outlines=False, selected_pads=None, selected_tracks=None, box=None, fixed_wiring=True):
     
     structure, vias = make_structure(board,include_zones, box)
     footprints, nets, pads = handle_footprints(board, inc_outlines, selected_pads, box)
@@ -88,7 +88,7 @@ def board_to_dsn(filename, board, include_zones=False, inc_outlines=False, selec
     
     result.extend((NL(2), make_network(board, vias, nets)))
     
-    result.extend((NL(2), make_wiring(board, vias, selected_tracks)))
+    result.extend((NL(2), make_wiring(board, vias, selected_tracks, fixed_wiring)))
     result.append(NL())
     return TU(result)
     
@@ -367,7 +367,7 @@ def make_structure(board,include_zones, box=None):
     
     structure_parts = []
     for idx, (_, name, layer_type) in enumerate(copper_layers):
-        structure_parts.append(TU([LA("layer"), SP(), name, NL(6),
+        structure_parts.append(TU([LA("layer"), SP(), LA(name), NL(6),
                             TU([LA("type"), SP(), LA(layer_type)]), NL(6),
                                 TU([LA("property"), NL(8),
                                 TU([LA("index"), SP(), LA(idx)]), NL(6)
@@ -447,8 +447,9 @@ def make_structure(board,include_zones, box=None):
         bottom_layer_name=copper_layers[-1][1]
         via_obj = [LA('padstack'), SP(), LQ(via_spec)]
         
-        via_obj.extend([NL(6),TU([LA('shape'),SP(),make_shape('Round', top_layer_name, (via_dia,via_dia), (0,0))])]) 
-        via_obj.extend([NL(6),TU([LA('shape'),SP(),make_shape('Round', bottom_layer_name, (via_dia,via_dia), (0,0))])]) 
+        for _,_,layer_name in copper_layers:
+            via_obj.extend([NL(6),TU([LA('shape'),SP(),make_shape('Round', layer_name, (via_dia,via_dia), (0,0))])]) 
+        
         
         via_obj.extend([NL(6),TU([LA('attach'),SP(), LA('off')]), NL(4)])
         
@@ -530,15 +531,15 @@ class Pads:
     def __init__(self):
         self.pads = {}
     
-    def __call__(self, pad_obj):
-        pad_name, pad_tup = make_pad(pad_obj)
+    def __call__(self, pad_obj, side='front'):
+        pad_name, pad_tup = make_pad(pad_obj,side)
         if pad_name is None:
             return None
         if not pad_name in self.pads:
             self.pads[pad_name]=pad_tup
         return pad_name
         
-def make_pad(pad_obj):
+def make_pad(pad_obj, side='front'):
     name = pad_obj.ShowPadShape()
     #attr = pad_obj.ShowPadAttr()
     size = pad_obj.GetSize()
@@ -552,6 +553,10 @@ def make_pad(pad_obj):
     
     on_top = pad_obj.IsOnLayer(0)    
     on_bottom = pad_obj.IsOnLayer(31)
+        
+    
+    if side=='back':
+        on_bottom,on_top = on_top,on_bottom
     
     if not (on_top or on_bottom):
         return None, None
@@ -567,18 +572,24 @@ def make_pad(pad_obj):
     if name=='Circle':# or (name=='Oval' and size[0]==size[1]):
         pad_name = "Round[%s]%sPad_%d_um" % (letter,offset_str,size[0]/1000)
     else:
+        name_cap='RoundRect' if name.lower()=='roundrect' else name.capitalize()
         x,y = size
         size_str = '%dx%d' % (x/1000,y/1000)    
-        pad_name = "%s[%s]%sPad_%s_um" % (name, letter,offset_str,size_str)
+        pad_name = "%s[%s]%sPad_%s_um" % (name_cap, letter,offset_str,size_str)
     
-    
+    board = pad_obj.GetBoard()
+    layer_names = [board.GetLayerName(i) for i in board.GetEnabledLayers().Seq() if i<32 and pad_obj.IsOnLayer(i)]
+        
     top_layer_name=pad_obj.GetBoard().GetLayerName(0)
     bottom_layer_name=pad_obj.GetBoard().GetLayerName(31)
     shape = [LA('padstack'), SP(), LQ(pad_name)]
-    if on_top:
-        shape.extend([NL(6),TU([LA('shape'),SP(),make_shape(name, top_layer_name, size, offset, obj=pad_obj)])]) 
-    if on_bottom:
-        shape.extend([NL(6),TU([LA('shape'),SP(),make_shape(name, bottom_layer_name, size, offset, obj=pad_obj)])]) 
+    for ln in layer_names:
+        shape.extend([NL(6),TU([LA('shape'),SP(),make_shape(name, ln, size, offset, obj=pad_obj)])]) 
+    
+    #if on_top:
+    #    shape.extend([NL(6),TU([LA('shape'),SP(),make_shape(name, top_layer_name, size, offset, obj=pad_obj)])]) 
+    #if on_bottom:
+    #    shape.extend([NL(6),TU([LA('shape'),SP(),make_shape(name, bottom_layer_name, size, offset, obj=pad_obj)])]) 
     shape.extend([NL(6), TU([LA('attach'),SP(), LA('off')]), NL(4)])
     pad_obj = TU(shape)
     
@@ -595,7 +606,9 @@ def get_number(numbers, num):
         numbers[num]=['']
         return num
     
-def fix_angle(a, b):
+def fix_angle(a, b,side='front'):
+    if side=='back':
+        a += 180
     if a==b:
         return 0
     
@@ -668,7 +681,7 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
         
     name = fp.GetFPIDAsString()
     
-    parts = [LA('image'), SP(), LA(name)]
+    parts = [LA('image'), SP(), LQ(name)]
     if inc_outlines:
         for d in fp.GraphicalItems():
         
@@ -684,11 +697,20 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
     
     nets={}
     
+    is_flipped = fp.IsFlipped()
+    if is_flipped:
+        assert fp.GetLayer()==31
+        fp.SetLayerAndFlip(0)
+    
+    
+    
+    
+    
     for pd in fp.Pads():
         #if not sel_pads is None:
         #    if not pd.GetNumber() in sel_pads:
         #        continue
-        
+        side='front'
         if pd.ShowPadAttr()=='NPTH':
             
             pad_shape = pd.ShowPadShape()
@@ -699,12 +721,16 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
                 npths.append(TU([LA('keepout'),SP(), QS(""), SP(), make_shape(pad_shape, layer, hole_size, (x, y))]))
                     
         else:
-            pad_name=pads(pd)
+            pad_name=pads(pd,side)
             if pad_name is None:
                 continue
             pad_number = get_number(numbers, pd.GetNumber())
             angle = fix_angle(fp.GetOrientationDegrees(),pd.GetOrientationDegrees())
             x,y = pd.GetPos0()
+            
+            if side=='back':
+                x=-x
+                y=-y
             
             xx = [LA('pin'),SP(),LQ(pad_name),SP()]
             if angle!=0:
@@ -721,8 +747,11 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
                     if not net in nets:
                         nets[net]=[]
                     nets[net].append("%s-%s" % (ref, pad_number))
-        
     
+    if is_flipped:
+        fp.SetLayerAndFlip(31)
+    
+    side = 'front' if fp.GetLayer()==0 else 'back'
     for np in npths:
         parts.extend((NL(6),np))
     
@@ -731,9 +760,9 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
     
     ref = fp.GetReference()
     x, y = fp.GetPosition()
-    side = 'front' if fp.GetLayer()==0 else 'back'
-    angle = fp.GetOrientationDegrees()
     
+    #angle = fp.GetOrientationDegrees()
+    angle = fix_angle(0,fp.GetOrientationDegrees(),side)
     val = fp.GetValue()
     place = TU([LA('place'), SP(), LQ(ref), SP(), LV(x), SP(), LV(-y), SP(), LA(side), SP(), LA(angle), SP(), TU([LA('PN'), SP(), LA(val)])])
     
@@ -742,7 +771,7 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
 
 #(wire (path B.Cu 400  91684.4 -57626.8  81911.5 -67399.7)(net "Net-(J3-Pad14)")(type route))
 
-def make_track_connection(track):
+def make_track_connection(track, fixed_wiring):
     layer = track.GetLayerName()
     
     width = track.GetWidth()
@@ -750,27 +779,36 @@ def make_track_connection(track):
     x1,y1 = track.GetEnd()
     net = track.GetNetname()
     
-    return TU([LA('wire'), SP(), TU([
+    vals = [LA('wire'), SP(), TU([
         LA('path'), SP(), LA(layer), SP(), LV(width), SP(), LV(x0), SP(), LV(-y0), SP(), LV(x1), SP(), LV(-y1)]),
-        SP(), TU([LA('net'), SP(), LQ(net)]), SP(), TU([LA('type'), SP(), LA('route')])])
-        
+        SP(), TU([LA('net'), SP(), LQ(net)])]
+    
+    if fixed_wiring:
+        vals.extend([SP(), TU([LA('type'), SP(), LA('route')])])
+    
+    return TU(vals)    
 
 
     
 #(via "Via[0-1]_800:400_um"  105536 -140463 (net /A0)(type route))    
-def make_via_connection(track, vias):
+def make_via_connection(track, vias, fixed_wiring):
     
     net_class = track.GetNetClassName()
     via_name = vias[net_class][0]
     
     x, y = track.GetPosition()
     net = track.GetNetname()
-    return TU([LA('via'), SP(), LQ(via_name), SP(), LV(x), SP(), LV(-y), SP(),
-        TU([LA('net'), SP(), LQ(net)]), SP(), TU([LA('type'), SP(), LA('route')])])
+    
+    vals = [LA('via'), SP(), LQ(via_name), SP(), LV(x), SP(), LV(-y), SP(),
+        TU([LA('net'), SP(), LQ(net)])]
 
+    if fixed_wiring:
+        vals.extend([SP(), TU([LA('type'), SP(), LA('route')])])
+    
+    return TU(vals)    
 
         
-def make_wiring(board, vias,selected_tracks):
+def make_wiring(board, vias,selected_tracks, fixed_wiring):
     res = [LA('wiring')]
     
     all_tracks = board.Tracks() if selected_tracks is None else selected_tracks
@@ -779,24 +817,13 @@ def make_wiring(board, vias,selected_tracks):
         
         res.append(NL(4))
         if track.Type() == pcbnew.PCB_VIA_T:
-            res.append(make_via_connection(track, vias))
+            res.append(make_via_connection(track, vias, fixed_wiring))
         else:
-            res.append(make_track_connection(track))
+            res.append(make_track_connection(track, fixed_wiring))
     res.append(NL(2))
     return TU(res)
             
             
-import sys
-if __name__ == "__main__":
-    infn = sys.argv[1] if len(sys.argv)>1 else '/home/james/elec/picocomputer/schematic/alt_compact/pp/rp6502.kicad_pcb'
-    outfn = sys.argv[2] if len(sys.argv)>2 else 'pp2.dsn'
-    inc_zones = sys.argv[3]=='zones' if len(sys.argv)>3 else False
-    inc_outlines=sys.argv[4]=='outlines' if len(sys.argv)>4 else False
-    pcb = pcbnew.LoadBoard(infn)
-    dd=board_to_dsn(outfn,pcb,inc_zones,inc_outlines)
-    with open(outfn,'w') as w:
-        w.write(str(dd))
-        w.write("\n")
         
 
     
