@@ -21,6 +21,8 @@ class MessageReceiver:
         self.get_process = get_process 
         self.cancel_set=False
         self.replies_sent=0
+        
+        
 
     def read_all(self):
         while True:
@@ -99,6 +101,7 @@ class MessageReceiver:
             
             return True
         except Exception as ex:
+            print(ex)
             print("problem with ",ln,msg_bytes,len(msg_bytes or []))
             #if not self.get_process() is None:
             #    print("problem with ",ln,msg_bytes,len(msg_bytes or []))

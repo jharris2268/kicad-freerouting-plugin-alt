@@ -12,7 +12,10 @@ def split_coords(coords):
 
 
 class Tracks:
+    """Converts track and vias from freerouting format to Kicad. Monitors changes using freerouting
+    id field."""
     def __init__(self, pcb, select_new_objs=False, update_call=None):
+        
         self.pcb = pcb
         
         self.nets = pcb.GetNetsByName()
@@ -23,7 +26,7 @@ class Tracks:
         
         self.curr_net=None
         self.last_refresh=0
-        self.curr_id = 0
+        self.call_count = 0
         self.update_call=update_call
         
         self.select_new_objs=False
@@ -40,12 +43,12 @@ class Tracks:
         elif p['object_type']=='via':
             self.via(p)
         
-        if (self.curr_id-self.last_refresh) >= 1000:
-            pcbnew.Refresh()
-            self.last_refresh=self.curr_id
+        if (self.call_count-self.last_refresh) >= 1000:
+            pcbnew.Refresh() #redraws pcb design on screen
+            self.last_refresh=self.call_count
             if self.update_call:
                 self.update_call()
-        self.curr_id += 1
+        self.call_count += 1
 
     def make_track(self, obj, fr, to):
         track = pcbnew.PCB_TRACK(self.pcb)
@@ -77,6 +80,7 @@ class Tracks:
         return via    
     
     def all_objs(self):
+        """returns list of all tracks and vias created by Tracks"""
         result = []
         for _,tt in self.tracks.items():
             result.extend(tt)
