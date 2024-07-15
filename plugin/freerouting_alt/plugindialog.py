@@ -40,6 +40,7 @@ class PluginDialog(FreeroutingAltBase):
         self.added_objs=None
         
         self.all_messages = None
+        self.message_receiver = None
     
     def get_process(self):
         return self._process
@@ -101,20 +102,22 @@ class PluginDialog(FreeroutingAltBase):
         wx.Yield()
     
     def on_close(self, event):
-        if self.is_running:
-            if self.message_receiver is not None:
-                self.message_receiver.cancel()
+        try:
         
-        
-        if self._process:
-            try:
-                self._process.wait(0.5)
-            except subprocess.TimeoutExpired:
-                self._process.kill()
-            except Exception as ex:
-                print("??",ex)
-                
-        self.EndModal(wx.ID_OK)
+            if self.is_running:
+                if self.message_receiver is not None:
+                    self.message_receiver.cancel()
+                       
+            
+            if self._process:
+                try:
+                    self._process.wait(0.5)
+                except subprocess.TimeoutExpired:
+                    self._process.kill()
+        except Exception as ex:
+            print("on_close exception??",ex)
+        finally:
+            self.EndModal(wx.ID_OK)
     
     def on_save_log(self, event):
         """open FileDialog, write logged messages"""
@@ -159,7 +162,7 @@ class PluginDialog(FreeroutingAltBase):
     
     def prep_dsn_text(self):
         dsn_obj=''
-        if self.selection.has_selection and self.route_within_zones_checkbox.IsChecked():
+        if self.selection.has_selection and self.only_route_selected_checkbox.IsChecked():
             dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board,
                 include_zones = not self.route_within_zones_checkbox.IsChecked(),
                 selected_pads = self.selection.objs,
@@ -193,7 +196,11 @@ class PluginDialog(FreeroutingAltBase):
         self.revert_objs()
         self.update(True)
         
-        
+    def set_text(self, which, text):
+        if which=='progress':
+            self.progress_text.SetLabel(text)
+        elif which=='info':
+            self.info_text.SetLabel(text)
     
     def call_run(self):
 

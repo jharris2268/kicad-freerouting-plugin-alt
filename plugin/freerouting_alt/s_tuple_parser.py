@@ -98,6 +98,7 @@ def read_tuple(input_str, idx):
             result.append(val)            
             
         elif input_str[idx]=='"':
+            
             val,idx = read_quoted_string(input_str, idx)
             result.append(val)
         elif input_str[idx] == '(':
@@ -109,6 +110,15 @@ def read_tuple(input_str, idx):
         else:
             curr,idx = read_label(input_str, idx)
             result.append(curr)
+            
+            #check for special case (quoted_string ")
+            if curr==Label("string_quote"):
+                if input_str[idx:idx+3] == ' ")':
+                    result.append(Whitespace(" "))
+                    result.append(Label('"'))
+                    idx+=2
+        
+            
                         
 
 def read_whitespace(input_str, idx):

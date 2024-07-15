@@ -1,5 +1,28 @@
 import pcbnew
+import subprocess
 
+def test_java():
+    result=None
+    try:
+        result=subprocess.run(['java', '--version'], capture_output=True)
+    except FileNotFoundError:
+        raise Exception("java executable not present")
+    
+    stdout = result.stdout.decode('utf-8').split("\n")
+    if not len(stdout)>=1:
+        raise Exception("unexpected result of java -version")
+    
+    version_number = stdout[0].split()
+    assert len(version_number)>=2
+    if not len(stdout)>=1:
+        raise Exception("unexpected result of java -version")
+        
+    version_int = int(version_number[1].split(".")[0])
+    
+    if version_int < 19:
+        raise Exception("java version 19 or higher required")
+        
+    return True
 
         
 class Selection:
@@ -43,10 +66,13 @@ class ShowMessages:
         force=False
         if msg['msg_type']=='progress':
             force=True
-            self.parent_dialog.progress_text.SetLabel(msg['msg'])
+            self.parent_dialog.set_text('progress',msg['msg'])
+            #self.parent_dialog.progress_text.SetLabel(msg['msg'])
+            #print(f"progress_text={self.parent_dialog.progress_text.GetLabel()}")
         elif msg['msg_type']=='info':
             force=True
-            self.parent_dialog.info_text.SetLabel(msg['msg'])
+            #self.parent_dialog.info_text.SetLabel(msg['msg'])
+            self.parent_dialog.set_text('info',msg['msg'])
         
         #mm = "%d\t\t%7.1fs\t%s:\t%-200.200s" % (msg['index'], msg['time']/1000000000, msg['msg_type'], msg['msg'])
         mm = "%8d %7.1fs %8s: %-120.120s" % (msg['index'], msg['time']/1000000000, msg['msg_type'], msg['msg'])
@@ -64,7 +90,7 @@ class ShowMessages:
         
         
         self.parent_dialog.update(force)
-
+        
 
 
 

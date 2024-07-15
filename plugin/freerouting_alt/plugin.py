@@ -5,6 +5,7 @@ import wx
 import pcbnew
 
 from .plugindialog import PluginDialog
+from .misc import test_java
 
 class FreeroutingAlt(pcbnew.ActionPlugin):
     """
@@ -18,6 +19,9 @@ class FreeroutingAlt(pcbnew.ActionPlugin):
         self.show_toolbar_button = True
         self.icon_file_name = os.path.join(os.path.dirname(__file__), 'icon_24x24.png') # Optional, defaults to ""
     def Run(self):
+        
+        test_java()
+        
         board = pcbnew.GetBoard()
         
         rt = PluginDialog(board, self)
@@ -25,7 +29,7 @@ class FreeroutingAlt(pcbnew.ActionPlugin):
             rt.init()
             rt.ShowModal()
             
-        except Exception as ex:
+        except ex:
             print(ex)
         finally:
             if rt.get_process():

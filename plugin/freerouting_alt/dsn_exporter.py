@@ -61,9 +61,9 @@ def LV(val, nd=1):
     return LA(fmt % (val/1000,))
     
 
-def board_to_dsn(filename, board, include_zones=False, inc_outlines=False, selected_pads=None, selected_tracks=None, box=None, fixed_wiring=True):
+def board_to_dsn(filename, board, include_zones=False, inc_outlines=False, selected_pads=None, selected_tracks=None, box=None, fixed_wiring=True, quarter_smd_clearance=False):
     
-    structure, vias = make_structure(board,include_zones, box)
+    structure, vias = make_structure(board,include_zones, box, quarter_smd_clearance)
     footprints, nets, pads = handle_footprints(board, inc_outlines, selected_pads, box)
     pads.update((b,c) for _,(b,c) in vias.items())
     
@@ -358,7 +358,7 @@ def make_polygon(layer, zone):
     add_coords(polygon_parts, vertices)
     return TU(polygon_parts)
 
-def make_structure(board,include_zones, box=None):
+def make_structure(board,include_zones, box=None, quarter_smd_clearance=False):
     
     board_layers = get_board_layers(board)
     copper_layers = [(a,b,c) for a,b,c in board_layers if a<32]#[:board.GetCopperLayerCount()]
@@ -441,14 +441,23 @@ def make_structure(board,include_zones, box=None):
         via_dia = net_class.GetViaDiameter()
         via_drl = net_class.GetViaDrill()
         
+        
+        
+        
         via_spec = 'Via[0-%d]_%d:%d_um' % (len(copper_layers)-1, via_dia//1000, via_drl//1000)
+        
+        
+        #increase via size to min of 2*board.GetDesignSettings().m_HoleClearance + 0.5*net_class.GetViaDrill() - net_class.GetClearance()
+        #not neccessary for latest freerouting: bug in mihosoft codebase?
+        min_via_size = 2*board.GetDesignSettings().m_HoleClearance + 0.5*net_class.GetViaDrill() - net_class.GetClearance()
+        via_pad_dia = max(via_dia, min_via_size)
         
         top_layer_name=copper_layers[0][1]
         bottom_layer_name=copper_layers[-1][1]
         via_obj = [LA('padstack'), SP(), LQ(via_spec)]
         
-        for _,_,layer_name in copper_layers:
-            via_obj.extend([NL(6),TU([LA('shape'),SP(),make_shape('Round', layer_name, (via_dia,via_dia), (0,0))])]) 
+        for _,layer_name,_ in copper_layers:
+            via_obj.extend([NL(6),TU([LA('shape'),SP(),make_shape('Round', layer_name, (via_pad_dia,via_pad_dia), (0,0))])]) 
         
         
         via_obj.extend([NL(6),TU([LA('attach'),SP(), LA('off')]), NL(4)])
@@ -470,7 +479,7 @@ def make_structure(board,include_zones, box=None):
         TU([LA('width'),SP(),LV(track_width)]),NL(6),
         TU([LA('clearance'),SP(),LV(clearance)]),NL(6),
         TU([LA('clearance'),SP(),LV(clearance),SP(),TU([LA("type"),SP(),LA("default_smd")])]),NL(6),
-        TU([LA('clearance'),SP(),LV(track_width/4),SP(), TU([LA("type"),SP(),LA("smd_smd")])]),NL(4),
+        TU([LA('clearance'),SP(),LV(track_width/4 if quarter_smd_clearance else clearance),SP(), TU([LA("type"),SP(),LA("smd_smd")])]),NL(4),
     ])
     structure_parts.append(rule)    
     
@@ -503,18 +512,24 @@ def handle_footprints(board, inc_outlines, selected_pads=None, box=None):
                     continue
             sel_pads=selected_pads.get(fp.GetReference()) or []
         comp_name, comp_image, comp_network, place = process_component_shape(pads, fp, inc_outlines, sel_pads)
-        if comp_name in components:
-            if comp_image == components[comp_name][0]:
-                pass
-            else:
+        if comp_name in dupe_names:
+            actual_comp_name=None
+            for dupe in dupe_names[comp_name]:
+                if comp_image == components[dupe][0]:
+                    actual_comp_name=dupe
+            
+            if actual_comp_name is None:
                 suff = '::%d' % len(dupe_names[comp_name])
                 assert comp_image.vals[2].val==comp_name
-                new_comp_name = comp_name+suff
-                comp_image.vals[2].val=new_comp_name
-                components[new_comp_name]=[comp_image, []]
-                comp_name = new_comp_name
+                actual_comp_name = comp_name+suff
+                comp_image.vals[2].val=actual_comp_name
+                dupe_names[comp_name].append(actual_comp_name)
+                components[actual_comp_name]=[comp_image, []]
+            
+            comp_name = actual_comp_name
+                
         else:
-            dupe_names[comp_name]=['']
+            dupe_names[comp_name]=[comp_name]
             components[comp_name]=[comp_image,[]]
         
         components[comp_name][1].append(place)
