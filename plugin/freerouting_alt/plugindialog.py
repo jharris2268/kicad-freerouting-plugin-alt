@@ -3,7 +3,7 @@ import pcbnew
 import subprocess, tempfile, time, os
 from .messages import MessageReceiver
 from .tracks import Tracks
-from . import dsn_exporter
+from . import dsn
 
 from .misc import Selection, ShowMessages
 
@@ -163,7 +163,7 @@ class PluginDialog(FreeroutingAltBase):
     def prep_dsn_text(self):
         dsn_obj=''
         if self.selection.has_selection and self.only_route_selected_checkbox.IsChecked():
-            dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board,
+            dsn_obj = dsn.board_to_dsn('autoroute.dsn', self.board,
                 include_zones = not self.route_within_zones_checkbox.IsChecked(),
                 selected_pads = self.selection.objs,
                 selected_tracks=self.selection.tracks,
@@ -175,7 +175,7 @@ class PluginDialog(FreeroutingAltBase):
             if self.board.GetConnectivity().GetUnconnectedCount(True)==0 and int(self.optimize_combobox.GetValue())>0:
                 fixed_wiring=False
             
-            dsn_obj = dsn_exporter.board_to_dsn('autoroute.dsn', self.board, fixed_wiring=fixed_wiring)
+            dsn_obj = dsn.board_to_dsn('autoroute.dsn', self.board, fixed_wiring=fixed_wiring)
         
         return str(dsn_obj)+'\n'
     

@@ -1,5 +1,5 @@
 import subprocess, os
-from . import dsn_exporter
+from . import dsn
 from .tracks import Tracks
 from .messages import MessageReceiver
 
@@ -28,7 +28,7 @@ def run_freerouting(board, fanout=False, optimize_passes=0, ignore_zones=True):
     if board.GetConnectivity().GetUnconnectedCount(True)==0 and optimize_passes>0:
         fixed_wiring=False
     
-    dsn_obj = dsn_exporter.board_to_dsn(board_filename, board, include_zones=(not ignore_zones), fixed_wiring=fixed_wiring)
+    dsn_obj = dsn.board_to_dsn(board_filename, board, include_zones=(not ignore_zones), fixed_wiring=fixed_wiring)
         
     dsn_text = str(dsn_obj)+'\n'
     
