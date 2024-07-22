@@ -4,7 +4,10 @@
  *
  *   Copyright (C) 2017 Michael Hoffer <info@michaelhoffer.de>
  *   Website www.freerouting.mihosoft.eu
-*
+ *
+ *   Copyright (C) 2024 James Harris
+ *   Website https://github.com/jharris2268/kicad-freerouting-plugin-alt
+ *  
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or

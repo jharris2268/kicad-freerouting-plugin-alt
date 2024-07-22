@@ -8,6 +8,9 @@
  *   Copyright (C) 2021 Erich S. Heinzle
  *   Website http://www.repo.hu/projects/freerouting_cli/
  *
+ *   Copyright (C) 2024 James Harris
+ *   Website https://github.com/jharris2268/kicad-freerouting-plugin-alt
+ *
  *   This program is free software: you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation, either version 3 of the License, or
