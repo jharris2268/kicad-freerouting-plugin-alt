@@ -28,3 +28,7 @@ def LV(val, nd=1):
         return LA("%d" % (val//1000,))
     fmt="%%0.%df" % nd
     return LA(fmt % (val/1000,))
+
+def make_via_name(via_dia, via_drl, num_layers):
+    return 'Via[0-%d]_%d:%d_um' % (num_layers-1, via_dia//1000, via_drl//1000)
+    

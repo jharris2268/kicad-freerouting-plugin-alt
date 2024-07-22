@@ -1,8 +1,9 @@
-from .misc import LA, NL, SP, QS, TU
+from .misc import LA, NL, SP, QS, TU, make_via_name
 
 from .structure import make_structure
 from .footprints import handle_footprints, make_placement, make_library, make_network
 from .wiring import make_wiring
+
 
 
 

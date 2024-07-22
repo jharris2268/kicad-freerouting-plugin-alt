@@ -22,7 +22,7 @@ def make_library(footprints, pads):
 
 def make_network(board, vias, nets):
     
-    net_classes=dict((str(a),[b.GetTrackWidth(),b.GetClearance(),[]]) for a,b in board.GetAllNetClasses().items())
+    net_classes=dict((str(a),[b.GetTrackWidth(),b.GetClearance(),[], b.GetViaDiameter(), b.GetViaDrill()]) for a,b in board.GetAllNetClasses().items())
     network = [LA('network')]
     for net_name, pins in nets.items():
         network.append(NL(4))
@@ -51,7 +51,7 @@ def make_network(board, vias, nets):
             
         net_classes[nc][2].append(net_name)
     
-    for name, (track_width, clearance,nets) in net_classes.items():
+    for name, (track_width, clearance,nets, via_dia, via_drl) in net_classes.items():
         use_name = 'kicad_default' if name=='Default' else name
         
         class_item = [LA('class'),SP(),LQ(use_name)]
@@ -68,7 +68,7 @@ def make_network(board, vias, nets):
             sp+=len(str(l))
         class_item.append(NL(6))
         
-        class_item.append(TU([LA('circuit'),NL(8),TU([LA('use_via'),SP(), LQ(vias[name][0])]),NL(6)]))
+        class_item.append(TU([LA('circuit'),NL(8),TU([LA('use_via'),SP(), LQ(vias[via_dia, via_drl][0])]),NL(6)]))
         class_item.append(NL(6))
         
         class_item.append(TU([LA('rule'),NL(8),TU([LA('width'),SP(), LV(track_width)]),NL(8),TU([LA('clearance'),SP(), LV(clearance)]),NL(6)]))

@@ -118,6 +118,7 @@ public class BoardObserverAdaptor implements BoardObservers
         polyline_obj.key("length").value(line_length(coords));
         polyline_obj.key("coords").value(coords);
         
+        polyline_obj.key("user_fixed").value(polyline.is_user_fixed());
         
         send_obj(polyline_obj);
     }
@@ -188,6 +189,7 @@ public class BoardObserverAdaptor implements BoardObservers
         via_obj.key("from_layer").value(via.board.layer_structure.arr[padstack.from_layer()]);
         via_obj.key("to_layer").value(via.board.layer_structure.arr[padstack.to_layer()]);
         
+        via_obj.key("user_fixed").value(via.is_user_fixed());
         send_obj(via_obj);
         
     }

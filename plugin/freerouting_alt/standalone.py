@@ -32,6 +32,8 @@ def run_freerouting(board, fanout=False, optimize_passes=0, ignore_zones=True):
         
     dsn_text = str(dsn_obj)+'\n'
     
+    tracks=Tracks(board)
+    
     remove_objs = list(board.Tracks())
     for i in remove_objs:
         self.board.Remove(i)
@@ -50,7 +52,7 @@ def run_freerouting(board, fanout=False, optimize_passes=0, ignore_zones=True):
     process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
     get_process = lambda: process
     
-    tracks=Tracks(board)
+    
     requests = {
         'design_file_text': {'file_name': board_filename+'.dsn', 'design_file_text': dsn_text},
         'continue_autoroute': lambda a: {'continue':True},

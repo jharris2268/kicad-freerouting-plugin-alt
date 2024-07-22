@@ -111,16 +111,30 @@ def make_structure(board,include_zones, box=None, quarter_smd_clearance=False):
     
     
     vias_all = {}
-    for name,net_class in board.GetAllNetClasses().items():
-        #Via[0-1]_800:400_um
+       
+    #we are assuming all vias go from top to bottom
+    
+    for _,net_class in board.GetAllNetClasses().items():
+        
         via_dia = net_class.GetViaDiameter()
         via_drl = net_class.GetViaDrill()
         
+        via_spec = make_via_name(via_dia, via_drl, len(copper_layers))
         
-        
-        
-        via_spec = 'Via[0-%d]_%d:%d_um' % (len(copper_layers)-1, via_dia//1000, via_drl//1000)
-        
+        vias_all[via_dia, via_drl] = [via_spec, None]
+    
+    #check for vias with different sizes to those specified by netclass
+    for item in board.Tracks():
+        if item.GetTypeDesc()=='Via':
+            via_dia, via_drl = item.GetWidth(), item.GetDrill()
+            if not (via_dia, via_drl) in vias_all:
+                via_spec = make_via_name(via_dia, via_drl, len(copper_layers))
+    
+                vias_all[via_dia, via_drl] = [via_spec, None]
+    
+    
+    
+    for (via_dia, via_drl), via_spec in vias_all.items():
         
         #increase via size to min of 2*board.GetDesignSettings().m_HoleClearance + 0.5*net_class.GetViaDrill() - net_class.GetClearance()
         #not neccessary for latest freerouting: bug in mihosoft codebase?
@@ -129,7 +143,7 @@ def make_structure(board,include_zones, box=None, quarter_smd_clearance=False):
         
         top_layer_name=copper_layers[0][1]
         bottom_layer_name=copper_layers[-1][1]
-        via_obj = [LA('padstack'), SP(), LQ(via_spec)]
+        via_obj = [LA('padstack'), SP(), LQ(via_spec[0])]
         
         for _,layer_name,_ in copper_layers:
             via_obj.extend([NL(6),TU([LA('shape'),SP(),make_shape('Round', layer_name, (via_pad_dia,via_pad_dia), (0,0))])]) 
@@ -137,7 +151,7 @@ def make_structure(board,include_zones, box=None, quarter_smd_clearance=False):
         
         via_obj.extend([NL(6),TU([LA('attach'),SP(), LA('off')]), NL(4)])
         
-        vias_all[str(name)] = (via_spec,TU(via_obj))
+        via_spec[1] = TU(via_obj)
         
     vias = TU([LA('via')])
     for _,(n,_) in vias_all.items():

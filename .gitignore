@@ -6,6 +6,7 @@ plugin/gui/dialog_base.py
 
 freerouting_alt/plugins/*
 freerouting_alt.zip
+install.sh
 
 *.dsn
 *.ses

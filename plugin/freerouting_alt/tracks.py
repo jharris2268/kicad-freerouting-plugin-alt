@@ -1,5 +1,7 @@
 import pcbnew
 
+from .dsn import make_via_name
+
 def pcbpoint(p):
     return pcbnew.VECTOR2I(int(p[0]*100), int(p[1]*-100))
 
@@ -19,7 +21,23 @@ class Tracks:
         self.pcb = pcb
         
         self.nets = pcb.GetNetsByName()
-        self.via_sizes = dict((v.GetName(),(v.GetViaDiameter(),v.GetViaDrill())) for _,v in pcb.GetAllNetClasses().items())
+        
+        #self.via_sizes = dict((v.GetName(),(v.GetViaDiameter(),v.GetViaDrill())) for _,v in pcb.GetAllNetClasses().items())
+        via_widths = set()
+                
+        self.via_sizes = {}
+        for _, v in pcb.GetAllNetClasses().items():
+            via_dia, via_drl = v.GetViaDiameter(),v.GetViaDrill()
+            via_widths.add((via_dia, via_drl))
+        for t in pcb.Tracks():
+            if t.GetTypeDesc()=='Via':
+                via_dia, via_drl = t.GetWidth(),t.GetDrill()
+                via_widths.add((via_dia, via_drl))
+        for via_dia, via_drl in via_widths:
+            
+            via_name = make_via_name(via_dia, via_drl, pcb.GetCopperLayerCount())
+            self.via_sizes[via_name] = (via_dia, via_drl)
+
         
         self.tracks = {}
         self.vias = {}
@@ -73,9 +91,9 @@ class Tracks:
         netn = obj['nets'][0]
         net = self.nets[netn]
         via.SetNet(net)
-        widths = self.via_sizes[net.GetNetClassName()]
-        via.SetWidth(widths[0])
-        via.SetDrill(widths[1])
+        via_dia, via_drl = self.via_sizes[obj['padstack']]
+        via.SetWidth(via_dia)
+        via.SetDrill(via_drl)
         
         return via    
     

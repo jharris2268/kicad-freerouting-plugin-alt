@@ -226,6 +226,8 @@ class PluginDialog(FreeroutingAltBase):
         
         print(args, board_filename, repr(dsn_text)[:50], len(dsn_text))
         
+        tracks=Tracks(self.board, self.update) #make this before remove existing tracks and vias
+        
         self.remove_objs = []
         if self.selection.has_selection:
             self.remove_objs = self.selection.tracks
@@ -239,7 +241,7 @@ class PluginDialog(FreeroutingAltBase):
         self._process = subprocess.Popen(args, stdout=subprocess.PIPE, stdin=subprocess.PIPE)
         
         
-        tracks=Tracks(self.board, self.update)
+        
         requests = {
             'design_file_text': {'file_name': board_filename+'.dsn', 'design_file_text': dsn_text},
             'continue_autoroute': autorouter_continue_dialog,

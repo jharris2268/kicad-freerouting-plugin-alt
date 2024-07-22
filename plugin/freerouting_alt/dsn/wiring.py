@@ -24,7 +24,10 @@ def make_track_connection(track, fixed_wiring):
 def make_via_connection(track, vias, fixed_wiring):
     
     net_class = track.GetNetClassName()
-    via_name = vias[net_class][0]
+    via_key = (track.GetWidth(), track.GetDrill())
+    if not via_key in vias:
+        raise Exception("?? not via_spec for %d %d" % via_key)
+    via_name = vias[via_key][0]
     
     x, y = track.GetPosition()
     net = track.GetNetname()
