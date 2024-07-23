@@ -1,0 +1,5 @@
+package eu.mihosoft.freerouting.constants;
+public class Constants {
+  public static final String FREEROUTING_VERSION = "<<ver>>";
+  public static final String FREEROUTING_BUILD_DATE = "<<date>>";
+}

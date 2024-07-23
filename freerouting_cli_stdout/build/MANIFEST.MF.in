@@ -1,0 +1,13 @@
+Manifest-Version: 1.0
+Automatic-Module-Name: eu.mihosoft.freerouting
+Built-By: <<user>>
+Created-By: <<javaver>>
+Build-Date: <<date>>
+Build-Time: <<time>>
+Build-Revision: 
+Specification-Title: freerouting_cli
+Specification-Version: unspecified
+Implementation-Title: freerouting_cli
+Implementation-Version: unspecified
+Main-Class: eu.mihosoft.freerouting.gui.MainApplication
+
