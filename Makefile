@@ -8,7 +8,7 @@ freerouting_alt.zip: freerouting_stdout.jar
 	cp plugin/freerouting_alt/*.py plugin/gui/dialog_base.py freerouting_cli_stdout/build/obj/freerouting_stdout.jar resources/* freerouting_alt/plugins/ \
 		&& cp plugin/freerouting_alt/dsn/*.py freerouting_alt/plugins/dsn/ \
 		&& cd freerouting_alt \
-		&& zip ../freerouting_alt.zip `find | grep -v __pycache__`
+		&& zip ../freerouting_alt.zip `find | grep -v __pycache__ | grep -v git`
 	
 	
 clean:
