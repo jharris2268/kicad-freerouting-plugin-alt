@@ -2,8 +2,6 @@ freerouting_cli_stdout/build/obj/
 freerouting_cli_stdout/build/Constants.java
 freerouting_cli_stdout/build/MANIFEST.MF
 
-plugin/gui/dialog_base.py
-
 freerouting_alt/plugins/*
 freerouting_alt.zip
 install.sh

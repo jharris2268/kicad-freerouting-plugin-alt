@@ -26,7 +26,7 @@ class FreeroutingAltBase ( wx.Dialog ):
 
         bSizer1 = wx.BoxSizer( wx.VERTICAL )
 
-        fgSizer1 = wx.FlexGridSizer( 0, 2, 0, 0 )
+        fgSizer1 = wx.FlexGridSizer( 0, 3, 0, 0 )
         fgSizer1.AddGrowableCol( 1 )
         fgSizer1.SetFlexibleDirection( wx.BOTH )
         fgSizer1.SetNonFlexibleGrowMode( wx.FLEX_GROWMODE_NONE )
@@ -39,6 +39,9 @@ class FreeroutingAltBase ( wx.Dialog ):
         self.fanout_checkbox = wx.CheckBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         fgSizer1.Add( self.fanout_checkbox, 0, wx.ALL, 5 )
 
+
+        fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
         self.m_staticText3 = wx.StaticText( self, wx.ID_ANY, _(u"Autoroute"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText3.Wrap( -1 )
 
@@ -47,6 +50,9 @@ class FreeroutingAltBase ( wx.Dialog ):
         self.autoroute_checkbox = wx.CheckBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         self.autoroute_checkbox.SetValue(True)
         fgSizer1.Add( self.autoroute_checkbox, 0, wx.ALL, 5 )
+
+
+        fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
         self.m_staticText4 = wx.StaticText( self, wx.ID_ANY, _(u"Optimize"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText4.Wrap( -1 )
@@ -57,6 +63,9 @@ class FreeroutingAltBase ( wx.Dialog ):
         self.optimize_combobox = wx.ComboBox( self, wx.ID_ANY, _(u"0"), wx.DefaultPosition, wx.DefaultSize, optimize_comboboxChoices, 0 )
         fgSizer1.Add( self.optimize_combobox, 0, wx.ALL, 5 )
 
+
+        fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
         self.m_staticText22 = wx.StaticText( self, wx.ID_ANY, _(u"Route within zones"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText22.Wrap( -1 )
 
@@ -66,6 +75,9 @@ class FreeroutingAltBase ( wx.Dialog ):
         self.route_within_zones_checkbox.SetValue(True)
         fgSizer1.Add( self.route_within_zones_checkbox, 0, wx.ALL, 5 )
 
+
+        fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
+
         self.m_staticText23 = wx.StaticText( self, wx.ID_ANY, _(u"Only route selected"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText23.Wrap( -1 )
 
@@ -73,6 +85,9 @@ class FreeroutingAltBase ( wx.Dialog ):
 
         self.only_route_selected_checkbox = wx.CheckBox( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, 0 )
         fgSizer1.Add( self.only_route_selected_checkbox, 0, wx.ALL, 5 )
+
+        self.save_dsn_button = wx.Button( self, wx.ID_ANY, _(u"Save DSN file"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        fgSizer1.Add( self.save_dsn_button, 0, wx.ALL, 5 )
 
         self.m_staticText5 = wx.StaticText( self, wx.ID_ANY, _(u"Progress"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText5.Wrap( -1 )
@@ -83,6 +98,9 @@ class FreeroutingAltBase ( wx.Dialog ):
         self.progress_text.Wrap( -1 )
 
         fgSizer1.Add( self.progress_text, 0, wx.ALL|wx.EXPAND, 5 )
+
+
+        fgSizer1.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
         self.m_staticText25 = wx.StaticText( self, wx.ID_ANY, _(u"Info"), wx.DefaultPosition, wx.DefaultSize, 0 )
         self.m_staticText25.Wrap( -1 )
@@ -98,6 +116,7 @@ class FreeroutingAltBase ( wx.Dialog ):
         bSizer1.Add( fgSizer1, 1, wx.ALIGN_LEFT|wx.ALIGN_TOP|wx.EXPAND, 5 )
 
         self.logging_text = wx.TextCtrl( self, wx.ID_ANY, wx.EmptyString, wx.DefaultPosition, wx.DefaultSize, wx.TE_DONTWRAP|wx.TE_MULTILINE )
+        self.logging_text.SetFont( wx.Font( 8, wx.FONTFAMILY_TELETYPE, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL, False, wx.EmptyString ) )
         self.logging_text.SetMinSize( wx.Size( 800,300 ) )
 
         bSizer1.Add( self.logging_text, 0, wx.ALL|wx.EXPAND, 5 )
@@ -201,6 +220,8 @@ class FreeroutingAltBase ( wx.Dialog ):
         bSizer3.Add( fgSizer2, 1, wx.ALIGN_LEFT, 5 )
 
         self.save_log_button = wx.Button( self, wx.ID_ANY, _(u"Save Log"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.save_log_button.Enable( False )
+
         bSizer3.Add( self.save_log_button, 0, wx.ALL, 5 )
 
 
@@ -211,7 +232,7 @@ class FreeroutingAltBase ( wx.Dialog ):
 
         bSizer2.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
-        self.close_button = wx.Button( self, wx.ID_ANY, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.close_button = wx.Button( self, wx.ID_CANCEL, _(u"Close"), wx.DefaultPosition, wx.DefaultSize, 0 )
 
         self.close_button.SetDefault()
         bSizer2.Add( self.close_button, 0, wx.ALL, 5 )
@@ -222,8 +243,13 @@ class FreeroutingAltBase ( wx.Dialog ):
 
         bSizer2.Add( ( 0, 0), 1, wx.EXPAND, 5 )
 
+        self.revert_button = wx.Button( self, wx.ID_ANY, _(u"Revert"), wx.DefaultPosition, wx.DefaultSize, 0 )
+        self.revert_button.Enable( False )
 
-        bSizer1.Add( bSizer2, 1, wx.ALIGN_CENTER_VERTICAL|wx.ALL|wx.EXPAND, 5 )
+        bSizer2.Add( self.revert_button, 0, wx.ALL, 5 )
+
+
+        bSizer1.Add( bSizer2, 1, wx.ALIGN_CENTER_HORIZONTAL, 5 )
 
 
         self.SetSizer( bSizer1 )
