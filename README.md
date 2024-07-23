@@ -33,5 +33,5 @@ through snap)
 
 
 
-[^1] There appears to be rounding errors for traces in the built in dsn exporter
+[^1]: There appears to be rounding errors for traces in the built in dsn exporter
 
