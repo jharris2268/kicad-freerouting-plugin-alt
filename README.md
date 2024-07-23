@@ -15,7 +15,7 @@ Futhermore, an alternative dsn exporter is provided. This can be used to
 * Route within zones (don't export filled zones, so adequate width traces are routing instead)
 * Only route selected (select components or pads before opening plugin, then only route traces between
 those pads)
-* Run optimize on a routed board[1]
+* Run optimize on a routed board[^1]
 
 The call to freerouting can be cancelled at any time. The (partial or full) result can be undone with
 the revert button.
@@ -33,5 +33,5 @@ through snap)
 
 
 
-1. There appears to be rounding errors for traces in the built in dsn exporter
+[^1] There appears to be rounding errors for traces in the built in dsn exporter
 
