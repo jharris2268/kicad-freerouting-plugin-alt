@@ -12,7 +12,7 @@ The plugin window can control whether or not to run the freerouting fanout, auto
 postroute optimize passes.
 
 Futhermore, an alternative dsn exporter is provided. This can be used to
-* Route within zones (don't export filled zones, so adequate width traces are routing instead)
+* Route within zones (don't export filled zones, so adequate width traces are routed instead)
 * Only route selected (select components or pads before opening plugin, then only route traces between
 those pads)
 * Run optimize on a routed board[^1]
