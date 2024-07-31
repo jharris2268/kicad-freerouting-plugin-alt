@@ -23,6 +23,7 @@
 
 from .misc import *
 from .geometry import make_path, make_shape, fix_angle
+from math import sin, cos, pi
 
 def make_placement(footprints):
     placement = [LA('placement')]
@@ -232,6 +233,13 @@ def get_number(numbers, num):
         numbers[num]=['']
         return num
 
+
+#Pad.GetPos0 removed from kicad version 8
+def get_local_position(pad, footprint):
+    x,y = pad.GetPosition() - footprint.GetPosition()
+    sina = sin(-footprint.GetOrientationDegrees() * pi / 180)
+    cosa = cos(-footprint.GetOrientationDegrees() * pi / 180)
+    return pcbnew.VECTOR2I(int(round(x*cosa+y*sina)), int(round(-x*sina+y*cosa)))
     
 
 
@@ -277,7 +285,11 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
             
             pad_shape = pd.ShowPadShape()
             pad_size = pd.GetSize()
-            x,y = pd.GetPos0()
+            
+            #x,y = pd.GetPos0()
+            x,y = get_local_position(pd, fp)
+            
+                       
             hole_size=(pad_size[0]+hole_buffer,pad_size[1]+hole_buffer)
             for layer in copper_layers:
                 npths.append(TU([LA('keepout'),SP(), QS(""), SP(), make_shape(pad_shape, layer, hole_size, (x, y))]))
@@ -288,7 +300,9 @@ def process_component_shape(pads, fp, inc_outlines, sel_pads=None):
                 continue
             pad_number = get_number(numbers, pd.GetNumber())
             angle = fix_angle(fp.GetOrientationDegrees(),pd.GetOrientationDegrees())
-            x,y = pd.GetPos0()
+            
+            #x,y = pd.GetPos0()
+            x,y = get_local_position(pd, fp)
             
             if side=='back':
                 x=-x

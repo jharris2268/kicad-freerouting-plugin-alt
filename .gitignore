@@ -6,7 +6,7 @@ freerouting_alt/plugins/*.py
 freerouting_alt/plugins/*.jar
 freerouting_alt/plugins/*.png
 freerouting_alt/plugins/dsn/*.py
-freerouting_alt.zip
+*.zip
 install.sh
 
 !.gitkeep

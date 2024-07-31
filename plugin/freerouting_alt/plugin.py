@@ -62,10 +62,6 @@ class FreeroutingAlt(pcbnew.ActionPlugin):
                     rt.get_process().kill()
             rt.Destroy()
         
-    
-    
-                     
-        
         
         
         

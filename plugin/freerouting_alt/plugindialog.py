@@ -44,9 +44,9 @@ def optimizer_continue_dialog(m):
     
 
 class PluginDialog(FreeroutingAltBase):
-    def __init__(self, board, parent):
+    def __init__(self, board, parent, autorun=False):
         super().__init__(None)
-        
+        self.autorun=autorun
         
         self.board = board
         
@@ -64,6 +64,8 @@ class PluginDialog(FreeroutingAltBase):
         
         self.all_messages = None
         self.message_receiver = None
+        
+        
     
     def get_process(self):
         return self._process
@@ -73,6 +75,10 @@ class PluginDialog(FreeroutingAltBase):
         for fp in self.board.Footprints():
             nn = set(pd.GetNumber() for pd in fp.Pads() if pd.GetNetname())
             self.total_num_pads+=len(nn)              
+        
+        if len(self.selection.objs)>0:
+            self.only_route_selected_checkbox.SetValue(True)
+        
         
         self.Bind( wx.EVT_CLOSE, self.on_close )
 
@@ -85,6 +91,9 @@ class PluginDialog(FreeroutingAltBase):
         self.update(True)
         self.SetFocus()
         
+        if self.autorun:
+            self.call_run()
+            self.wx.PostEvent(self, wx.EVT_CLOSE)
         
         
     
