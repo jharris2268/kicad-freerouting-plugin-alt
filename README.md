@@ -25,7 +25,7 @@ the revert button.
 
 This has been developed on an ubuntu machine. It has not been tested on Windows or MacOS.
 
-* Kicad version 7.0
+* Kicad version 7.0 or 8.0
 * java, version 1.9, executable installed and available (this may be an issue if you installed kicad
 through snap)
 * wx python bindings installed (should be a requirement for kicad in any case)
